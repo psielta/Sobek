@@ -107,6 +107,36 @@ export const DEFAULT_PHASE_TEMPLATE: PhaseTemplate[] = [
   { name: "Commit/Merge", defaultActor: "Codex", orderIndex: 9, color: "#16a34a", role: "Merge" },
 ];
 
+/** English phase names for non-Portuguese VS Code display languages. */
+const PHASE_NAME_EN: Record<WorkflowPhaseRole, string> = {
+  PromptEngineering: "Prompt engineering",
+  Planning: "Planning",
+  PlanReview: "Plan review",
+  PlanCorrection: "Plan correction",
+  Implementation: "Implementation",
+  CodeReview: "Code review",
+  ReviewCorrection: "Review correction",
+  PracticalTest: "Practical test",
+  Rebase: "Update branch with main",
+  Merge: "Commit/Merge",
+};
+
+export const DEFAULT_PHASE_TEMPLATE_EN: PhaseTemplate[] = DEFAULT_PHASE_TEMPLATE.map((phase) => ({
+  ...phase,
+  name: PHASE_NAME_EN[phase.role as WorkflowPhaseRole],
+}));
+
+/**
+ * Default template in the editor's display language. Phase names are DATA
+ * (snapshotted per task), so this only affects newly created templates;
+ * existing tasks keep their snapshot, like Thoth.
+ */
+export function defaultPhaseTemplateForLocale(language: string | undefined): PhaseTemplate[] {
+  return language?.toLowerCase().startsWith("pt")
+    ? DEFAULT_PHASE_TEMPLATE
+    : DEFAULT_PHASE_TEMPLATE_EN;
+}
+
 export const PHASE_COLOR_PALETTE = [
   "#2563eb",
   "#7c3aed",
@@ -130,7 +160,10 @@ function normalizePhaseName(name: string): string {
 }
 
 const ROLE_BY_NORMALIZED_NAME = new Map<string, WorkflowPhaseRole>(
-  DEFAULT_PHASE_TEMPLATE.map((phase) => [normalizePhaseName(phase.name), phase.role as WorkflowPhaseRole])
+  [...DEFAULT_PHASE_TEMPLATE, ...DEFAULT_PHASE_TEMPLATE_EN].map((phase) => [
+    normalizePhaseName(phase.name),
+    phase.role as WorkflowPhaseRole,
+  ])
 );
 
 export function resolveRoleByName(name: string): WorkflowPhaseRole | undefined {

@@ -92,6 +92,7 @@
   "Gemini key saved to SecretStorage.": "Chave Gemini salva no SecretStorage.",
   "Gemini key removed.": "Chave Gemini removida.",
   "Plan with Claude": "Planejar no Claude",
+  "Plan mode started": "Plan mode iniciado",
   "Agent default (no --effort)": "Padrão do agente (sem --effort)",
   "Effort level for this terminal": "Nível de effort para este terminal",
   "Launches Claude and stages the prompt as a plan-mode draft": "Inicia o Claude e preenche o prompt como rascunho de plan mode",

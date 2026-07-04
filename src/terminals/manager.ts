@@ -222,7 +222,7 @@ export class TerminalManager {
       return;
     }
     await this.store.mutateWorkflow(prompt.id, (target, now) => {
-      setPhase(target, planning.id, now, undefined, "Plan mode iniciado");
+      setPhase(target, planning.id, now, undefined, vscode.l10n.t("Plan mode started"));
     });
   }
 

@@ -7,6 +7,7 @@ import {
   changeActor,
   completeWorkflow,
   DEFAULT_PHASE_TEMPLATE,
+  defaultPhaseTemplateForLocale,
   editPhases,
   findPhaseByRole,
   reopenWorkflow,
@@ -159,5 +160,27 @@ describe("role resolution by name", () => {
     expect(resolveRoleByName("revisao do plano")).toBe("PlanReview");
     expect(resolveRoleByName("IMPLEMENTAÇÃO")).toBe("Implementation");
     expect(resolveRoleByName("fase inventada")).toBeUndefined();
+  });
+
+  it("recognizes the English default names too", () => {
+    expect(resolveRoleByName("Plan review")).toBe("PlanReview");
+    expect(resolveRoleByName("update branch with main")).toBe("Rebase");
+  });
+});
+
+describe("localized default template", () => {
+  it("keeps Portuguese for pt locales and English otherwise", () => {
+    expect(defaultPhaseTemplateForLocale("pt-br")[0].name).toBe("Engenharia de prompt");
+    expect(defaultPhaseTemplateForLocale("pt-PT")[0].name).toBe("Engenharia de prompt");
+    expect(defaultPhaseTemplateForLocale("en")[0].name).toBe("Prompt engineering");
+    expect(defaultPhaseTemplateForLocale(undefined)[0].name).toBe("Prompt engineering");
+  });
+
+  it("preserves roles, actors and colors across languages", () => {
+    const pt = defaultPhaseTemplateForLocale("pt-br");
+    const en = defaultPhaseTemplateForLocale("en");
+    expect(en.map((phase) => phase.role)).toEqual(pt.map((phase) => phase.role));
+    expect(en.map((phase) => phase.color)).toEqual(pt.map((phase) => phase.color));
+    expect(en.map((phase) => phase.defaultActor)).toEqual(pt.map((phase) => phase.defaultActor));
   });
 });

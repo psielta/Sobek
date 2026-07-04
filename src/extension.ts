@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { AiService } from "./ai/service";
+import { defaultPhaseTemplateForLocale } from "./core/workflow";
 import { WorkspaceFileIndex } from "./language/file-index";
 import { extendMarkdownItWithMentions } from "./language/markdown-preview";
 import { MentionDecorations } from "./language/mention-decorations";
@@ -77,7 +78,10 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
     return;
   }
 
-  const store = new PromptStore(workspaceRoot);
+  const store = new PromptStore(
+    workspaceRoot,
+    defaultPhaseTemplateForLocale(vscode.env.language)
+  );
   await store.load();
 
   const fileIndex = new WorkspaceFileIndex(workspaceRoot);

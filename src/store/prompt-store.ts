@@ -76,7 +76,11 @@ export class PromptStore {
   private customTemplates: PromptTemplateDefinition[] = [];
   private customTemplateErrors: CustomTemplateError[] = [];
 
-  constructor(private readonly workspaceRoot: string) {}
+  constructor(
+    private readonly workspaceRoot: string,
+    /** Default phase template for new settings (localized by the caller). */
+    private readonly defaultPhaseTemplate: PhaseTemplate[] = DEFAULT_PHASE_TEMPLATE
+  ) {}
 
   get root(): string {
     return this.workspaceRoot;
@@ -124,7 +128,11 @@ export class PromptStore {
     const stored = await readJsonFile<Partial<SobekSettings>>(
       path.join(this.sobekDir, "settings.json")
     );
-    this.settings = { ...DEFAULT_SETTINGS, ...stored };
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      phaseTemplate: this.defaultPhaseTemplate,
+      ...stored,
+    };
 
     let entries: string[] = [];
     try {
