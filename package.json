@@ -49,6 +49,12 @@
           "contextualTitle": "Sobek"
         },
         {
+          "id": "sobekTerminals",
+          "name": "%view.terminals%",
+          "icon": "media/sobek.svg",
+          "contextualTitle": "Sobek"
+        },
+        {
           "id": "sobekAssistant",
           "type": "webview",
           "name": "%view.assistant%",
@@ -67,6 +73,11 @@
         "view": "sobekPrompts",
         "contents": "%welcome.noWorkspace%",
         "when": "!sobek.hasWorkspace"
+      },
+      {
+        "view": "sobekTerminals",
+        "contents": "%welcome.noTerminals%",
+        "when": "sobek.hasWorkspace"
       }
     ],
     "commands": [
@@ -229,6 +240,23 @@
         "title": "%cmd.refreshAgentUsage%",
         "category": "Sobek",
         "icon": "$(pulse)"
+      },
+      {
+        "command": "sobek.revealTerminal",
+        "title": "%cmd.revealTerminal%",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.killTerminal",
+        "title": "%cmd.killTerminal%",
+        "category": "Sobek",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "sobek.openTerminalPrompt",
+        "title": "%cmd.openTerminalPrompt%",
+        "category": "Sobek",
+        "icon": "$(go-to-file)"
       }
     ],
     "menus": {
@@ -247,6 +275,11 @@
           "command": "sobek.refreshPrompts",
           "when": "view == sobekPrompts",
           "group": "navigation@9"
+        },
+        {
+          "command": "sobek.newWorkspaceTerminal",
+          "when": "view == sobekTerminals",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
@@ -256,24 +289,29 @@
           "group": "inline@1"
         },
         {
+          "command": "sobek.runPromptInAgentTerminal",
+          "when": "view == sobekPrompts",
+          "group": "inline@2"
+        },
+        {
           "command": "sobek.generateChildPrompt",
           "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
-          "group": "inline@2"
+          "group": "inline@3"
         },
         {
           "command": "sobek.linkPlan",
           "when": "view == sobekPrompts && viewItem == sobekRootPrompt-noplan",
-          "group": "inline@3"
+          "group": "inline@4"
         },
         {
           "command": "sobek.archivePrompt",
           "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
-          "group": "inline@4"
+          "group": "inline@5"
         },
         {
           "command": "sobek.deletePrompt",
           "when": "view == sobekPrompts",
-          "group": "inline@5"
+          "group": "inline@6"
         },
         {
           "command": "sobek.generateChildPrompt",
@@ -369,11 +407,33 @@
           "command": "sobek.deletePrompt",
           "when": "view == sobekPrompts",
           "group": "3_danger@2"
+        },
+        {
+          "command": "sobek.killTerminal",
+          "when": "view == sobekTerminals && viewItem == sobekTerminal",
+          "group": "inline@1"
+        },
+        {
+          "command": "sobek.openTerminalPrompt",
+          "when": "view == sobekTerminals && viewItem =~ /^sobekTerminal(Group)?$/",
+          "group": "1_nav@1"
         }
       ],
       "commandPalette": [
         {
           "command": "sobek.openChildPrompt",
+          "when": "false"
+        },
+        {
+          "command": "sobek.revealTerminal",
+          "when": "false"
+        },
+        {
+          "command": "sobek.killTerminal",
+          "when": "false"
+        },
+        {
+          "command": "sobek.openTerminalPrompt",
           "when": "false"
         },
         {

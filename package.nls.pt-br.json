@@ -1,9 +1,11 @@
 {
   "ext.description": "Workbench de engenharia de prompts para agentes de código: prompts Markdown versionados, geração de prompts filhos, workflow kanban e terminais de agentes vinculados ao seu workspace.",
   "view.prompts": "Prompts",
+  "view.terminals": "Terminais",
   "view.assistant": "Assistente IA",
   "welcome.noPrompts": "Nenhum prompt neste workspace ainda.\n[Criar prompt](command:sobek.createPrompt)\nOs prompts ficam versionados em `.sobek/` na raiz do workspace.",
   "welcome.noWorkspace": "Abra uma pasta para usar o Sobek: o workspace aberto é o diretório alvo dos prompts.",
+  "welcome.noTerminals": "Nenhum terminal do Sobek aberto.\n[Novo terminal no workspace](command:sobek.newWorkspaceTerminal)\nInicie agentes pelo menu de um prompt ou execute um prompt diretamente.",
   "cmd.createPrompt": "Novo prompt",
   "cmd.refreshPrompts": "Recarregar prompts",
   "cmd.openPrompt": "Abrir prompt",
@@ -45,6 +47,9 @@
   "config.aiIncludeWorkflowContext": "Inclui o estado da tarefa (fase atual, responsável, últimas notas) como contexto da IA.",
   "config.aiIncludeGitContext": "Inclui branch atual e últimos commits do repositório como contexto da IA.",
   "cmd.refreshAgentUsage": "Atualizar uso dos agentes",
+  "cmd.revealTerminal": "Mostrar terminal",
+  "cmd.killTerminal": "Encerrar terminal",
+  "cmd.openTerminalPrompt": "Abrir prompt",
   "config.usageEnabled": "Mostra indicadores de limites de uso do Claude Code e do Codex na status bar.",
   "config.usageClaudePath": "Caminho do .credentials.json do Claude Code (vazio usa ~/.claude/.credentials.json).",
   "config.usageCodexPath": "Caminho do diretório de sessões do Codex (vazio usa ~/.codex/sessions)."

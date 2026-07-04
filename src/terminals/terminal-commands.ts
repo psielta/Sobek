@@ -124,8 +124,9 @@ export function registerTerminalCommands(
 }
 
 /**
- * Post-child-creation offer: open a terminal with the target agent already
- * executing the child prompt (Thoth's showAgentTerminalOfferAfterChildPrompt).
+ * Post-child-creation offer, like Thoth's CreateAgentTerminalDialog: run the
+ * child prompt in an agent terminal now, defaulting to the child's target
+ * agent but letting the user pick Claude/Codex/Grok instead.
  */
 export async function offerAgentTerminalForChild(
   manager: TerminalManager,
@@ -137,14 +138,34 @@ export async function offerAgentTerminalForChild(
   if (!enabled) {
     return;
   }
-  const agent = agentForTarget(child.targetAgent);
-  const runLabel = vscode.l10n.t("Run now");
+  const defaultAgent = agentForTarget(child.targetAgent);
+  const runDefaultLabel = vscode.l10n.t("Run in {0}", defaultAgent);
+  const chooseLabel = vscode.l10n.t("Choose agent...");
   const answer = await vscode.window.showInformationMessage(
-    vscode.l10n.t("Open a terminal with {0} running the child prompt now?", agent),
-    runLabel
+    vscode.l10n.t("Run the child prompt in an agent terminal now?"),
+    runDefaultLabel,
+    chooseLabel
   );
-  if (answer !== runLabel) {
+  if (!answer) {
     return;
   }
+
+  let agent: AgentKind = defaultAgent;
+  if (answer === chooseLabel) {
+    const picked = await vscode.window.showQuickPick(
+      agentPicks()
+        .filter((pick) => pick.agent !== "ClaudePlan")
+        .map((pick) => ({
+          ...pick,
+          label: pick.agent === defaultAgent ? `$(star-full) ${pick.label}` : pick.label,
+        })),
+      { placeHolder: vscode.l10n.t("Run the prompt in which agent?") }
+    );
+    if (!picked) {
+      return;
+    }
+    agent = picked.agent;
+  }
+
   await manager.create({ prompt: child, agent, submitPrompt: true });
 }

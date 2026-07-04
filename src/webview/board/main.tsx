@@ -56,6 +56,7 @@ type BoardKey =
   | "modeToggleTitle"
   | "openPrompt"
   | "generateChild"
+  | "run"
   | "advance"
   | "note"
   | "archive"
@@ -82,6 +83,7 @@ const DICT: Dictionary<BoardKey> = {
   },
   openPrompt: { en: "Open prompt", "pt-br": "Abrir prompt" },
   generateChild: { en: "Generate child", "pt-br": "Gerar filho" },
+  run: { en: "▶ Run", "pt-br": "▶ Executar" },
   advance: { en: "Advance", "pt-br": "Avançar" },
   note: { en: "Note", "pt-br": "Nota" },
   archive: { en: "Archive", "pt-br": "Arquivar" },
@@ -149,6 +151,9 @@ function Card({ card }: { card: BoardCard }) {
         {card.hasChildren && <span className="badge" title={t("hasChildren")}>⑂</span>}
       </div>
       <div className="card-actions">
+        <button onClick={() => vscode.postMessage({ type: "run", promptId: card.id })}>
+          {t("run")}
+        </button>
         <button onClick={() => vscode.postMessage({ type: "generateChild", promptId: card.id })}>
           {t("generateChild")}
         </button>

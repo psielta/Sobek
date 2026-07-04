@@ -19,9 +19,11 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-interface ManagedTerminal {
+export interface ManagedTerminal {
   terminal: vscode.Terminal;
   promptId?: string;
+  agent?: AgentKind;
+  createdAt: number;
 }
 
 /**
@@ -32,6 +34,10 @@ interface ManagedTerminal {
  */
 export class TerminalManager {
   private readonly managed = new Set<ManagedTerminal>();
+  private readonly changeEmitter = new vscode.EventEmitter<void>();
+
+  /** Fires when a Sobek terminal is created or closed. */
+  readonly onDidChange = this.changeEmitter.event;
 
   /** Notified when an agent CLI is launched (feeds the usage indicators). */
   onAgentLaunch?: () => void;
@@ -41,14 +47,24 @@ export class TerminalManager {
     context: vscode.ExtensionContext
   ) {
     context.subscriptions.push(
+      this.changeEmitter,
       vscode.window.onDidCloseTerminal((terminal) => {
+        let removed = false;
         for (const entry of this.managed) {
           if (entry.terminal === terminal) {
             this.managed.delete(entry);
+            removed = true;
           }
+        }
+        if (removed) {
+          this.changeEmitter.fire();
         }
       })
     );
+  }
+
+  list(): ManagedTerminal[] {
+    return [...this.managed].sort((a, b) => a.createdAt - b.createdAt);
   }
 
   countFor(promptId: string): number {
@@ -89,7 +105,8 @@ export class TerminalManager {
       color: defaults ? new vscode.ThemeColor(defaults.themeColor) : undefined,
       iconPath: new vscode.ThemeIcon(agent ? "robot" : "terminal"),
     });
-    this.managed.add({ terminal, promptId: prompt?.id });
+    this.managed.add({ terminal, promptId: prompt?.id, agent, createdAt: Date.now() });
+    this.changeEmitter.fire();
     terminal.show();
 
     if (agent) {
@@ -158,11 +175,16 @@ export class TerminalManager {
 
   /** Archived prompts must not keep terminals alive. */
   killForPrompt(promptId: string): void {
+    let removed = false;
     for (const entry of [...this.managed]) {
       if (entry.promptId === promptId) {
         entry.terminal.dispose();
         this.managed.delete(entry);
+        removed = true;
       }
+    }
+    if (removed) {
+      this.changeEmitter.fire();
     }
   }
 }

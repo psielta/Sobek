@@ -13,6 +13,7 @@ import {
   offerAgentTerminalForChild,
   registerTerminalCommands,
 } from "./terminals/terminal-commands";
+import { registerTerminalsView } from "./terminals/terminals-view";
 import { AssistantViewProvider } from "./ui/assistant-view";
 import { BoardPanel } from "./ui/board-panel";
 import { CHILD_PREVIEW_SCHEME, ChildPromptPreviewProvider } from "./ui/child-preview";
@@ -96,6 +97,7 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
     offerAgentTerminalForChild(terminals, child)
   );
   registerTerminalCommands(context, store, terminals);
+  registerTerminalsView(context, store, terminals);
   registerWorkflowCommands(context, store);
 
   context.subscriptions.push(

@@ -1,9 +1,11 @@
 {
   "ext.description": "Prompt engineering workbench for AI coding agents: versioned Markdown prompts, child prompt generation, kanban workflow and agent terminals bound to your workspace.",
   "view.prompts": "Prompts",
+  "view.terminals": "Terminals",
   "view.assistant": "AI Assistant",
   "welcome.noPrompts": "No prompts in this workspace yet.\n[Create prompt](command:sobek.createPrompt)\nPrompts are versioned under `.sobek/` at the workspace root.",
   "welcome.noWorkspace": "Open a folder to use Sobek: the open workspace is the target directory for prompts.",
+  "welcome.noTerminals": "No Sobek terminals open.\n[New workspace terminal](command:sobek.newWorkspaceTerminal)\nLaunch agents from a prompt's context menu or run a prompt directly.",
   "cmd.createPrompt": "New Prompt",
   "cmd.refreshPrompts": "Reload Prompts",
   "cmd.openPrompt": "Open Prompt",
@@ -45,6 +47,9 @@
   "config.aiIncludeWorkflowContext": "Include the task state (current phase, owner, recent notes) as AI context.",
   "config.aiIncludeGitContext": "Include the current branch and latest commits as AI context.",
   "cmd.refreshAgentUsage": "Refresh Agent Usage",
+  "cmd.revealTerminal": "Show Terminal",
+  "cmd.killTerminal": "Kill Terminal",
+  "cmd.openTerminalPrompt": "Open Prompt",
   "config.usageEnabled": "Show Claude Code and Codex usage limit indicators in the status bar.",
   "config.usageClaudePath": "Path to Claude Code's .credentials.json (empty uses ~/.claude/.credentials.json).",
   "config.usageCodexPath": "Path to the Codex sessions directory (empty uses ~/.codex/sessions)."

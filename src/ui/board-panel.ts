@@ -195,6 +195,9 @@ export class BoardPanel {
         case "generateChild":
           await vscode.commands.executeCommand("sobek.generateChildPrompt", message.promptId);
           break;
+        case "run":
+          await vscode.commands.executeCommand("sobek.runPromptInAgentTerminal", message.promptId);
+          break;
         case "archive":
           await this.store.updateStatus(message.promptId!, "Archived");
           break;
