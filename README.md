@@ -28,6 +28,7 @@ O projeto porta o **core** do [Thoth](https://github.com/psielta/gerenciamento-d
 - Vincule um **plano Markdown** (ex.: plano gerado pelo Claude Code em plan-mode) a um prompt raiz.
 - Gere prompts auxiliares a partir de **9 templates** portados do Thoth: revisar plano (com ou sem o prompt pai como contexto), re-review, implementar (inclusive em worktree), revisar PR, re-review de PR com a resposta do Codex, rebase e merge.
 - Referências de PR são resolvidas em cascata (input → PR salva no plano) e persistidas para a próxima geração.
+- **Templates personalizados por workspace**: crie os seus em `.sobek/templates/<slug>.md` (comando *Criar template personalizado* gera o esqueleto). Frontmatter define nome, agente alvo, `targetPhaseRole` opcional (avanço automático da fase do pai) e inputs próprios; o corpo usa os placeholders `{AbsolutePath}`, `{DisplayName}`, `{ParentPromptContent}`, `{PullRequestReference}` e `{input:chave}`. Os arquivos recarregam ao salvar e são versionáveis no git.
 
 ### 📋 Kanban de workflow
 - Cada prompt raiz é uma tarefa com **workflow de 10 fases** (Engenharia de prompt → Planejamento → Revisão do plano → ... → Commit/Merge), snapshot próprio de fases, responsável atual (Você/Claude/Codex/Grok) e timeline append-only.

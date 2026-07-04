@@ -50,13 +50,17 @@ export interface RenderedPromptTemplate {
 }
 
 export interface PromptTemplateDefinition {
-  key: PromptTemplateKey;
+  /** Built-in PromptTemplateKey or `custom:<slug>` for workspace templates. */
+  key: string;
   displayName: string;
   description: string;
   defaultTargetAgent: TargetAgent;
   defaultKind: PromptKind;
-  targetPhaseRole: WorkflowPhaseRole;
+  /** Phase the PARENT workflow advances to; absent = no auto-advance. */
+  targetPhaseRole?: WorkflowPhaseRole;
   isReReview: boolean;
+  /** Requires a PR reference before rendering. */
+  requiresPullRequest?: boolean;
   displayOrder: number;
   inputs: PromptTemplateInput[];
   render(context: PromptTemplateContext): RenderedPromptTemplate;
@@ -183,6 +187,7 @@ export const PROMPT_TEMPLATES: PromptTemplateDefinition[] = [
     defaultKind: "General",
     targetPhaseRole: "CodeReview",
     isReReview: false,
+    requiresPullRequest: true,
     displayOrder: 60,
     inputs: [
       PULL_REQUEST_INPUT("Informe o numero ou link da PR criada apos a implementacao do plano."),
@@ -210,6 +215,7 @@ export const PROMPT_TEMPLATES: PromptTemplateDefinition[] = [
     defaultKind: "General",
     targetPhaseRole: "CodeReview",
     isReReview: true,
+    requiresPullRequest: true,
     displayOrder: 61,
     inputs: [
       PULL_REQUEST_INPUT("Informe o numero ou link da PR revisada apos as correcoes."),
@@ -266,6 +272,7 @@ export const PROMPT_TEMPLATES: PromptTemplateDefinition[] = [
     defaultKind: "General",
     targetPhaseRole: "Merge",
     isReReview: false,
+    requiresPullRequest: true,
     displayOrder: 70,
     inputs: [PULL_REQUEST_INPUT("Informe o numero ou link da PR que deve ser mesclada.")],
     render: (context) => ({
@@ -292,16 +299,6 @@ export function findTemplate(key: string): PromptTemplateDefinition | undefined 
   return PROMPT_TEMPLATES.find((template) => template.key === key);
 }
 
-const TEMPLATES_REQUIRING_PR: PromptTemplateKey[] = [
-  "ReviewPullRequest",
-  "ReReviewPullRequest",
-  "MergePullRequest",
-];
-
-export function templateRequiresPullRequest(key: PromptTemplateKey): boolean {
-  return TEMPLATES_REQUIRING_PR.includes(key);
-}
-
 export interface RenderDraftOptions {
   template: PromptTemplateDefinition;
   planAbsolutePath: string;
@@ -322,7 +319,7 @@ export function renderPromptDraft(options: RenderDraftOptions): RenderedPromptTe
   const inputs = { ...(options.inputs ?? {}) };
 
   let pullRequestReference: string | undefined;
-  if (templateRequiresPullRequest(template.key)) {
+  if (template.requiresPullRequest) {
     const rawPr =
       options.pullRequestInput?.trim() ||
       inputs.pullRequest?.trim() ||

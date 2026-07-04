@@ -20,6 +20,7 @@
   "cmd.generateChildPrompt": "Gerar prompt filho",
   "cmd.linkPlan": "Vincular plano Markdown",
   "cmd.unlinkPlan": "Desvincular plano",
+  "cmd.createChildTemplate": "Criar template personalizado de filho",
   "cmd.newPromptTerminal": "Novo terminal do prompt",
   "cmd.launchAgentTerminal": "Iniciar agente no terminal",
   "cmd.runPromptInAgentTerminal": "Executar prompt no agente",

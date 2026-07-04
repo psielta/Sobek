@@ -13,7 +13,8 @@ Trate este repositório como projeto de portfólio: preserve clareza arquitetura
 - A listagem principal (tree view) mostra somente prompts pai; filhos aparecem aninhados sob o pai.
 - Clicar em um prompt filho abre preview somente leitura (`sobek-child:` scheme); nunca abra o filho como superfície de edição.
 - Prompts filhos são gerados a partir de um plano Markdown vinculado ao pai e nunca têm workflow próprio.
-- Criar um filho com `sourceTemplateKey` avança o workflow do PAI para a fase do `targetPhaseRole` do template; re-reviews incrementam `currentPhaseIteration`.
+- Criar um filho com `sourceTemplateKey` avança o workflow do PAI para a fase do `targetPhaseRole` do template (quando definido); re-reviews incrementam `currentPhaseIteration`.
+- Templates personalizados vivem em `.sobek/templates/<slug>.md` (frontmatter + corpo com placeholders; parser em `src/core/custom-templates.ts`) e usam `custom:<slug>` como `sourceTemplateKey`. Os 9 built-ins em `src/core/templates.ts` permanecem verbatim do Thoth — não os altere.
 - Menções `@arquivo` devem resolver dentro do workspace (sem paths absolutos, sem `..`); referência inexistente gera warning mas não bloqueia salvar.
 - Toda mudança de conteúdo ou status cria uma `PromptVersion` imutável e incrementa `currentVersion`.
 - Concluir o workflow NÃO arquiva o prompt: `Prompt.status` e `Workflow.status` são eixos independentes.

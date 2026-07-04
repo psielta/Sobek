@@ -83,6 +83,17 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
   const fileIndex = new WorkspaceFileIndex(workspaceRoot);
   fileIndex.register(context);
 
+  // Workspace-defined child templates reload live as their files change.
+  const templatesWatcher = vscode.workspace.createFileSystemWatcher(
+    new vscode.RelativePattern(workspaceRoot, ".sobek/templates/*.md")
+  );
+  context.subscriptions.push(
+    templatesWatcher,
+    templatesWatcher.onDidCreate(() => void store.reloadCustomTemplates()),
+    templatesWatcher.onDidChange(() => void store.reloadCustomTemplates()),
+    templatesWatcher.onDidDelete(() => void store.reloadCustomTemplates())
+  );
+
   const tree = new PromptTreeProvider(store);
   context.subscriptions.push(
     vscode.window.createTreeView("sobekPrompts", { treeDataProvider: tree, showCollapseAll: true }),

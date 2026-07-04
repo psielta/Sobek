@@ -20,6 +20,7 @@
   "cmd.generateChildPrompt": "Generate Child Prompt",
   "cmd.linkPlan": "Link Markdown Plan",
   "cmd.unlinkPlan": "Unlink Plan",
+  "cmd.createChildTemplate": "Create Custom Child Template",
   "cmd.newPromptTerminal": "New Prompt Terminal",
   "cmd.launchAgentTerminal": "Launch Agent in Terminal",
   "cmd.runPromptInAgentTerminal": "Run Prompt in Agent",

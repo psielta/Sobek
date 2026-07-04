@@ -160,6 +160,12 @@
         "category": "Sobek"
       },
       {
+        "command": "sobek.createChildTemplate",
+        "title": "%cmd.createChildTemplate%",
+        "category": "Sobek",
+        "icon": "$(file-add)"
+      },
+      {
         "command": "sobek.newPromptTerminal",
         "title": "%cmd.newPromptTerminal%",
         "category": "Sobek",
@@ -333,6 +339,11 @@
           "command": "sobek.unlinkPlan",
           "when": "view == sobekPrompts && viewItem == sobekRootPrompt-plan",
           "group": "0_generate@3"
+        },
+        {
+          "command": "sobek.createChildTemplate",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
+          "group": "0_generate@4"
         },
         {
           "command": "sobek.renamePrompt",

@@ -12,6 +12,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { newId } from "../lib/ids";
+import {
+  parseCustomTemplate,
+  type CustomTemplateError,
+} from "../core/custom-templates";
 import { parseMentions, resolveMentionPath } from "../core/mentions";
 import type {
   FileReference,
@@ -22,7 +26,7 @@ import type {
   PromptVersion,
   TargetAgent,
 } from "../core/prompt";
-import { findTemplate } from "../core/templates";
+import { findTemplate, type PromptTemplateDefinition } from "../core/templates";
 import {
   advanceForGeneratedChild,
   DEFAULT_PHASE_TEMPLATE,
@@ -69,6 +73,8 @@ export class PromptStore {
   private listeners = new Set<StoreListener>();
   private archiveListeners = new Set<(promptId: string) => void>();
   private loaded = false;
+  private customTemplates: PromptTemplateDefinition[] = [];
+  private customTemplateErrors: CustomTemplateError[] = [];
 
   constructor(private readonly workspaceRoot: string) {}
 
@@ -86,6 +92,14 @@ export class PromptStore {
 
   promptMarkdownPath(id: string): string {
     return path.join(this.promptDir(id), "prompt.md");
+  }
+
+  get templatesDir(): string {
+    return path.join(this.sobekDir, "templates");
+  }
+
+  customTemplatePath(slug: string): string {
+    return path.join(this.templatesDir, `${slug}.md`);
   }
 
   onDidChange(listener: StoreListener): () => void {
@@ -131,8 +145,55 @@ export class PromptStore {
       const content = (await readTextFile(this.promptMarkdownPath(id))) ?? "";
       this.prompts.set(id, { ...meta, content });
     }
+    await this.reloadCustomTemplates(false);
     this.loaded = true;
     this.notify();
+  }
+
+  /** Reads workspace-defined templates from .sobek/templates/*.md. */
+  async reloadCustomTemplates(notify = true): Promise<void> {
+    const templates: PromptTemplateDefinition[] = [];
+    const errors: CustomTemplateError[] = [];
+    let entries: string[] = [];
+    try {
+      entries = await fs.readdir(this.templatesDir);
+    } catch {
+      entries = [];
+    }
+    for (const entry of entries.sort()) {
+      if (!entry.endsWith(".md")) {
+        continue;
+      }
+      const slug = entry.slice(0, -3);
+      const content = await readTextFile(path.join(this.templatesDir, entry));
+      if (content === undefined) {
+        continue;
+      }
+      const result = parseCustomTemplate(slug, content);
+      if (result.definition) {
+        templates.push(result.definition);
+      } else {
+        errors.push(result.error);
+      }
+    }
+    this.customTemplates = templates;
+    this.customTemplateErrors = errors;
+    if (notify) {
+      this.notify();
+    }
+  }
+
+  getCustomTemplates(): PromptTemplateDefinition[] {
+    return this.customTemplates;
+  }
+
+  getCustomTemplateErrors(): CustomTemplateError[] {
+    return this.customTemplateErrors;
+  }
+
+  /** Built-in template by key, or a workspace template via `custom:<slug>`. */
+  resolveTemplate(key: string): PromptTemplateDefinition | undefined {
+    return findTemplate(key) ?? this.customTemplates.find((template) => template.key === key);
   }
 
   private ensureLoaded(): void {
@@ -287,8 +348,8 @@ export class PromptStore {
     await this.appendVersion(prompt, "Created");
 
     if (parent && input.sourceTemplateKey) {
-      const template = findTemplate(input.sourceTemplateKey);
-      if (template && parent.workflow) {
+      const template = this.resolveTemplate(input.sourceTemplateKey);
+      if (template?.targetPhaseRole && parent.workflow) {
         const advanced = advanceForGeneratedChild(
           parent.workflow,
           template.targetPhaseRole,

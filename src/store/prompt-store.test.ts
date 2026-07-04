@@ -107,6 +107,68 @@ describe("delete", () => {
   });
 });
 
+describe("custom templates", () => {
+  const TEMPLATE = `---
+name: Revisão de segurança
+targetAgent: Codex
+targetPhaseRole: CodeReview
+---
+Audite o plano "{AbsolutePath}".
+`;
+
+  it("loads workspace templates and resolves custom keys", async () => {
+    await fs.mkdir(path.join(root, ".sobek", "templates"), { recursive: true });
+    await fs.writeFile(path.join(root, ".sobek", "templates", "seguranca.md"), TEMPLATE, "utf8");
+    await store.reloadCustomTemplates();
+    expect(store.getCustomTemplates().map((template) => template.key)).toEqual([
+      "custom:seguranca",
+    ]);
+    expect(store.resolveTemplate("custom:seguranca")?.displayName).toBe("Revisão de segurança");
+    expect(store.resolveTemplate("ReviewPlan")?.displayName).toBe("Revisar plano");
+  });
+
+  it("advances the parent workflow for custom templates with a role", async () => {
+    await fs.mkdir(path.join(root, ".sobek", "templates"), { recursive: true });
+    await fs.writeFile(path.join(root, ".sobek", "templates", "seguranca.md"), TEMPLATE, "utf8");
+    await fs.writeFile(
+      path.join(root, ".sobek", "templates", "sem-fase.md"),
+      "---\nname: Sem fase\n---\ncorpo",
+      "utf8"
+    );
+    await store.reloadCustomTemplates();
+
+    const parent = await store.create({ title: "Pai", content: "" });
+    await store.create({
+      title: "Filho custom",
+      content: "...",
+      parentPromptId: parent.id,
+      sourceTemplateKey: "custom:seguranca",
+    });
+    expect(store.require(parent.id).workflow?.currentPhaseName).toBe("Revisão de código");
+
+    const before = store.require(parent.id).workflow?.currentPhaseName;
+    await store.create({
+      title: "Filho sem fase",
+      content: "...",
+      parentPromptId: parent.id,
+      sourceTemplateKey: "custom:sem-fase",
+    });
+    expect(store.require(parent.id).workflow?.currentPhaseName).toBe(before);
+  });
+
+  it("collects parse errors without failing the load", async () => {
+    await fs.mkdir(path.join(root, ".sobek", "templates"), { recursive: true });
+    await fs.writeFile(
+      path.join(root, ".sobek", "templates", "quebrado.md"),
+      "sem frontmatter",
+      "utf8"
+    );
+    await store.reloadCustomTemplates();
+    expect(store.getCustomTemplates()).toHaveLength(0);
+    expect(store.getCustomTemplateErrors()[0]?.slug).toBe("quebrado");
+  });
+});
+
 describe("linked plan", () => {
   it("stores plan pointers (relative or absolute) and PR references", async () => {
     const prompt = await store.create({ title: "T", content: "" });

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatPullRequestReference } from "./prompt";
-import {
-  findTemplate,
-  getTemplatesInDisplayOrder,
-  renderPromptDraft,
-  templateRequiresPullRequest,
-} from "./templates";
+import { findTemplate, getTemplatesInDisplayOrder, renderPromptDraft } from "./templates";
 
 const PLAN = {
   planAbsolutePath: "D:\\repo\\docs\\plan.md",
@@ -31,9 +26,10 @@ describe("template catalog", () => {
   it("marks re-review templates and PR requirements", () => {
     expect(findTemplate("ReReviewPlan")?.isReReview).toBe(true);
     expect(findTemplate("ReReviewPullRequest")?.isReReview).toBe(true);
-    expect(templateRequiresPullRequest("ReviewPullRequest")).toBe(true);
-    expect(templateRequiresPullRequest("MergePullRequest")).toBe(true);
-    expect(templateRequiresPullRequest("ReviewPlan")).toBe(false);
+    expect(findTemplate("ReviewPullRequest")?.requiresPullRequest).toBe(true);
+    expect(findTemplate("MergePullRequest")?.requiresPullRequest).toBe(true);
+    expect(findTemplate("ReReviewPullRequest")?.requiresPullRequest).toBe(true);
+    expect(findTemplate("ReviewPlan")?.requiresPullRequest).toBeUndefined();
   });
 });
 

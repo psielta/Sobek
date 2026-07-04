@@ -3,10 +3,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { Prompt } from "../core/prompt";
 import {
-  findTemplate,
   getTemplatesInDisplayOrder,
   renderPromptDraft,
-  templateRequiresPullRequest,
   type PromptTemplateDefinition,
 } from "../core/templates";
 import type { PromptStore } from "../store/prompt-store";
@@ -130,7 +128,7 @@ async function collectInputs(
   const inputs: Record<string, string> = {};
   let pullRequestInput: string | undefined;
 
-  if (templateRequiresPullRequest(template.key)) {
+  if (template.requiresPullRequest) {
     const prDefinition = template.inputs.find((input) => input.key === "pullRequest");
     pullRequestInput = await vscode.window.showInputBox({
       prompt: prDefinition?.helpText ?? vscode.l10n.t("Enter the PR number or URL."),
@@ -237,6 +235,61 @@ export function registerGenerateChildCommands(
       await store.setLinkedPlan(id, undefined);
     }),
 
+    vscode.commands.registerCommand("sobek.createChildTemplate", async () => {
+      const name = await vscode.window.showInputBox({
+        prompt: vscode.l10n.t("Name for the custom template"),
+        placeHolder: vscode.l10n.t("E.g.: Security review"),
+        ignoreFocusOut: true,
+        validateInput: (value) =>
+          value.trim().length === 0 ? vscode.l10n.t("Enter a name.") : undefined,
+      });
+      if (!name) {
+        return;
+      }
+      const slug = name
+        .trim()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48) || "template";
+      const filePath = store.customTemplatePath(slug);
+      if (!fs.existsSync(filePath)) {
+        const skeleton = [
+          "---",
+          `name: ${name.trim()}`,
+          "description: Descreva quando usar este template",
+          "targetAgent: ClaudeCode   # ClaudeCode | Codex | Grok",
+          "kind: General             # General | Planning",
+          "# targetPhaseRole: CodeReview   # opcional — avança a fase do pai (PromptEngineering, Planning, PlanReview, PlanCorrection, Implementation, CodeReview, ReviewCorrection, PracticalTest, Rebase, Merge)",
+          "# isReReview: false",
+          `title: "${name.trim()}: {DisplayName}"`,
+          "# inputs:",
+          "#   - key: escopo",
+          "#     label: Escopo",
+          "#     placeholder: descreva o escopo",
+          "#     required: true",
+          "#     multiline: false",
+          "---",
+          `Escreva aqui o conteúdo do prompt filho.`,
+          "",
+          "Placeholders disponíveis:",
+          '- {AbsolutePath} — caminho absoluto do plano vinculado',
+          "- {DisplayName} — nome do plano",
+          "- {ParentPromptContent} — conteúdo do prompt pai",
+          "- {PullRequestReference} — referência de PR (usar torna a PR obrigatória)",
+          "- {input:escopo} — valor de um input declarado no frontmatter",
+          "",
+        ].join("\n");
+        await fs.promises.mkdir(store.templatesDir, { recursive: true });
+        await fs.promises.writeFile(filePath, skeleton, "utf8");
+        await store.reloadCustomTemplates();
+      }
+      const document = await vscode.workspace.openTextDocument(filePath);
+      await vscode.window.showTextDocument(document);
+    }),
+
     vscode.commands.registerCommand("sobek.generateChildPrompt", async (ref: PromptRef) => {
       const id = resolvePromptId(ref);
       if (!id) {
@@ -263,18 +316,69 @@ export function registerGenerateChildCommands(
       parent = withPlan;
       const plan = parent.linkedPlan!;
 
-      const pickedTemplate = await vscode.window.showQuickPick(
-        getTemplatesInDisplayOrder().map((template) => ({
-          label: template.isReReview ? `$(sync) ${template.displayName}` : template.displayName,
-          description: template.description,
-          key: template.key,
-        })),
-        { placeHolder: vscode.l10n.t("Child prompt template") }
-      );
+      // Broken workspace templates never block the flow; surface them once.
+      const templateErrors = store.getCustomTemplateErrors();
+      if (templateErrors.length > 0) {
+        const openLabel = vscode.l10n.t("Open template");
+        void vscode.window
+          .showWarningMessage(
+            vscode.l10n.t(
+              'Invalid custom template "{0}": {1}',
+              templateErrors[0].slug,
+              templateErrors[0].message
+            ),
+            openLabel
+          )
+          .then(async (answer) => {
+            if (answer === openLabel) {
+              const document = await vscode.workspace.openTextDocument(
+                store.customTemplatePath(templateErrors[0].slug)
+              );
+              await vscode.window.showTextDocument(document);
+            }
+          });
+      }
+
+      type TemplatePick = vscode.QuickPickItem & {
+        template?: PromptTemplateDefinition;
+        action?: "create";
+      };
+      const items: TemplatePick[] = getTemplatesInDisplayOrder().map((template) => ({
+        label: template.isReReview ? `$(sync) ${template.displayName}` : template.displayName,
+        description: template.description,
+        template,
+      }));
+      const customs = store.getCustomTemplates();
+      if (customs.length > 0) {
+        items.push({
+          label: vscode.l10n.t("Workspace templates"),
+          kind: vscode.QuickPickItemKind.Separator,
+        });
+        items.push(
+          ...customs.map((template) => ({
+            label: `$(file-code) ${template.displayName}`,
+            description: template.description,
+            template,
+          }))
+        );
+      }
+      items.push({ label: "", kind: vscode.QuickPickItemKind.Separator });
+      items.push({
+        label: `$(add) ${vscode.l10n.t("Create custom template...")}`,
+        action: "create",
+      });
+
+      const pickedTemplate = await vscode.window.showQuickPick(items, {
+        placeHolder: vscode.l10n.t("Child prompt template"),
+      });
       if (!pickedTemplate) {
         return;
       }
-      const template = findTemplate(pickedTemplate.key)!;
+      if (pickedTemplate.action === "create") {
+        await vscode.commands.executeCommand("sobek.createChildTemplate");
+        return;
+      }
+      const template = pickedTemplate.template!;
 
       const collected = await collectInputs(template, plan.pullRequestReference);
       if (!collected) {
