@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { AiService } from "./ai/service";
 import { WorkspaceFileIndex } from "./language/file-index";
+import { MentionDecorations } from "./language/mention-decorations";
 import {
   MentionCompletionProvider,
   MentionDiagnostics,
@@ -134,6 +135,7 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
     )
   );
   new MentionDiagnostics(store, workspaceRoot).register(context);
+  new MentionDecorations(store, workspaceRoot).register(context);
   registerMentionRetrigger(context, store);
 }
 
