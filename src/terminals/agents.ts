@@ -5,25 +5,28 @@
 
 export type AgentKind = "Claude" | "ClaudePlan" | "Codex" | "Grok";
 
-export type ClaudeEffort = "low" | "medium" | "high" | "max";
+/** Effort levels shared by the Claude and Grok CLIs (`--effort`). */
+export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
-export const CLAUDE_EFFORTS: ClaudeEffort[] = ["low", "medium", "high", "max"];
+export const EFFORT_LEVELS: EffortLevel[] = ["low", "medium", "high", "xhigh", "max"];
 
 const CLAUDE_BASE_COMMAND = "claude --dangerously-skip-permissions";
+const GROK_BASE_COMMAND = "grok --always-approve";
 
 /**
- * CLI invocation per agent. Claude's --effort flag is optional: omitted, the
- * CLI uses its own default (Thoth always sent --effort max; Sobek lets the
- * user choose).
+ * CLI invocation per agent, verified against the installed CLIs: Claude and
+ * Grok accept `--effort low|medium|high|xhigh|max` (omitted = CLI default);
+ * Codex keeps `--yolo` (still accepted as an alias of
+ * --dangerously-bypass-approvals-and-sandbox).
  */
-export function buildAgentCommand(agent: AgentKind, claudeEffort?: ClaudeEffort): string {
+export function buildAgentCommand(agent: AgentKind, effort?: EffortLevel): string {
   switch (agent) {
     case "Codex":
       return "codex --yolo";
     case "Grok":
-      return "grok --always-approve";
+      return effort ? `${GROK_BASE_COMMAND} --effort ${effort}` : GROK_BASE_COMMAND;
     default:
-      return claudeEffort ? `${CLAUDE_BASE_COMMAND} --effort ${claudeEffort}` : CLAUDE_BASE_COMMAND;
+      return effort ? `${CLAUDE_BASE_COMMAND} --effort ${effort}` : CLAUDE_BASE_COMMAND;
   }
 }
 

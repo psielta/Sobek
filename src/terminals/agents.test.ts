@@ -21,11 +21,19 @@ describe("agent launch commands", () => {
     expect(buildAgentCommand("Claude", "low")).toBe(
       "claude --dangerously-skip-permissions --effort low"
     );
+    expect(buildAgentCommand("Claude", "xhigh")).toBe(
+      "claude --dangerously-skip-permissions --effort xhigh"
+    );
   });
 
-  it("keeps Codex and Grok invocations fixed", () => {
-    expect(buildAgentCommand("Codex")).toBe("codex --yolo");
+  it("supports --effort on Grok too", () => {
     expect(buildAgentCommand("Grok")).toBe("grok --always-approve");
+    expect(buildAgentCommand("Grok", "xhigh")).toBe("grok --always-approve --effort xhigh");
+  });
+
+  it("keeps the Codex invocation fixed", () => {
+    expect(buildAgentCommand("Codex")).toBe("codex --yolo");
+    expect(buildAgentCommand("Codex", "max")).toBe("codex --yolo");
   });
 
   it("keeps the agent tab defaults", () => {

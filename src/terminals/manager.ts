@@ -11,7 +11,7 @@ import {
   needsLeadingCharStaging,
   SLASH_STAGING_DELAY_MS,
   type AgentKind,
-  type ClaudeEffort,
+  type EffortLevel,
 } from "./agents";
 
 export const MAX_SESSIONS_PER_PROMPT = 8;
@@ -83,7 +83,8 @@ export class TerminalManager {
     submitPrompt?: boolean;
     /** Stage the flattened prompt as an unsent draft (no Enter). */
     stagePrompt?: boolean;
-    claudeEffort?: ClaudeEffort;
+    /** --effort level for Claude/Grok launches (omitted = CLI default). */
+    effort?: EffortLevel;
   }): Promise<vscode.Terminal | undefined> {
     const { prompt, agent } = options;
 
@@ -117,7 +118,7 @@ export class TerminalManager {
     if (agent) {
       this.onAgentLaunch?.();
       await delay(AGENT_COMMAND_DELAY_MS);
-      terminal.sendText(buildAgentCommand(agent, options.claudeEffort), true);
+      terminal.sendText(buildAgentCommand(agent, options.effort), true);
 
       const content = prompt ? flattenPromptForCli(prompt.content) : "";
       if (agent === "ClaudePlan" && content) {
