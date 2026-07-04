@@ -54,7 +54,7 @@ body {
 
 .board-kanban {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .board-vertical {
@@ -74,15 +74,21 @@ body {
   outline: 2px solid transparent;
 }
 
+/* Full-height columns with a generous drop area even when empty. */
 .board-kanban .column {
   min-width: 260px;
   max-width: 300px;
   flex: 0 0 auto;
+  min-height: 240px;
   max-height: 100%;
 }
 
 .board-vertical .column {
   width: 100%;
+}
+
+.board-vertical .column-cards {
+  min-height: 64px;
 }
 
 .column-over {
@@ -125,6 +131,28 @@ body {
   flex-direction: column;
   gap: 8px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 48px;
+}
+
+/* Empty columns keep a visible drop target instead of collapsing. */
+.column-droppable .column-cards:empty {
+  border: 1px dashed var(--vscode-panel-border);
+  border-radius: 6px;
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.column-droppable .column-cards:empty::after {
+  content: "Solte um cartão aqui";
+  font-size: 11px;
+  opacity: 0.45;
+}
+
+.column-over .column-cards:empty {
+  border-color: var(--vscode-focusBorder);
 }
 
 .board-vertical .column-cards {

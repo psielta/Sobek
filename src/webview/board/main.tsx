@@ -123,7 +123,7 @@ function Column({
   const [over, setOver] = useState(false);
   return (
     <section
-      className={`column${over ? " column-over" : ""}`}
+      className={`column${column.droppable ? " column-droppable" : ""}${over ? " column-over" : ""}`}
       onDragOver={(event) => {
         if (column.droppable && event.dataTransfer.types.includes("text/sobek-card")) {
           event.preventDefault();
