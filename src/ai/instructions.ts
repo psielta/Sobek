@@ -1,0 +1,61 @@
+/**
+ * System instructions ported verbatim from Thoth's Application layer so the
+ * extension keeps behavioural parity with the original backend.
+ */
+
+export const REFINE_SYSTEM_INSTRUCTION =
+  "Você é um especialista em engenharia de prompts. " +
+  "Otimize o prompt do usuário para clareza, completude e eficácia. " +
+  "Escreva SEMPRE o prompt final em português (pt-BR), independentemente do idioma de entrada. " +
+  "Responda APENAS com o prompt otimizado em Markdown compatível com TipTap " +
+  "(use títulos, listas, negrito e code blocks; sem HTML). " +
+  "Preserve menções @caminho/arquivo intactas. " +
+  "Não adicione explicações, apenas o prompt melhorado.";
+
+export const CHAT_SYSTEM_INSTRUCTION =
+  "Você é um assistente especializado em engenharia de prompts para Claude Code e Codex. " +
+  "Responda SEMPRE em português (pt-BR). " +
+  "SEMPRE formate suas respostas em Markdown: use cabeçalhos, listas, negrito, itálico, " +
+  "código com indicação de linguagem (```csharp, ```typescript, etc.) e tabelas quando adequado. " +
+  "Para blocos de código, sempre especifique a linguagem. " +
+  "Seja claro, direto e técnico.";
+
+/** Names read from the workspace root when AI context is enabled. */
+export const WORKSPACE_CONTEXT_FILES = ["README.md", "CLAUDE.md", "AGENT.md"] as const;
+
+export const MAX_CONTEXT_FILE_BYTES = 64 * 1024;
+export const MAX_TOTAL_CONTEXT_CHARS = 48_000;
+
+export interface WorkspaceContextFile {
+  name: string;
+  content: string;
+}
+
+/** Builds the "Contexto do workspace" block appended to system instructions. */
+export function buildWorkspaceContextBlock(files: WorkspaceContextFile[]): string | undefined {
+  if (files.length === 0) {
+    return undefined;
+  }
+  const sections = files.map((file) => `### ${file.name}\n\n${file.content}`);
+  return [
+    "## Contexto do workspace",
+    "Os arquivos abaixo descrevem o projeto e suas convenções; use-os como contexto.",
+    ...sections,
+  ].join("\n\n");
+}
+
+export function buildRefineSystemInstruction(context?: string): string {
+  return context ? `${REFINE_SYSTEM_INSTRUCTION}\n\n${context}` : REFINE_SYSTEM_INSTRUCTION;
+}
+
+export function buildChatSystemInstruction(context?: string): string {
+  return context ? `${CHAT_SYSTEM_INSTRUCTION}\n\n${context}` : CHAT_SYSTEM_INSTRUCTION;
+}
+
+/** Composes the user turn when the current prompt is included as chat context. */
+export function buildChatUserMessage(message: string, promptContent?: string): string {
+  if (!promptContent) {
+    return message;
+  }
+  return `${message}\n\n---\n**Conteúdo do prompt atual:**\n${promptContent}`;
+}
