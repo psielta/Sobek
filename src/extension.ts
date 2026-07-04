@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { AiService } from "./ai/service";
 import {
   MentionCompletionProvider,
   MentionDiagnostics,
@@ -11,8 +12,10 @@ import {
   offerAgentTerminalForChild,
   registerTerminalCommands,
 } from "./terminals/terminal-commands";
+import { AssistantViewProvider } from "./ui/assistant-view";
 import { BoardPanel } from "./ui/board-panel";
 import { CHILD_PREVIEW_SCHEME, ChildPromptPreviewProvider } from "./ui/child-preview";
+import { registerRefineCommand } from "./ui/refine-command";
 import { registerGenerateChildCommands } from "./ui/generate-child";
 import { registerPromptCommands } from "./ui/prompt-commands";
 import { PromptTreeProvider } from "./ui/tree";
@@ -55,6 +58,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("sobek.openBoard", () => {
       BoardPanel.show(context, store);
     })
+  );
+
+  const ai = new AiService(context, workspaceRoot);
+  registerRefineCommand(context, store, ai);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      AssistantViewProvider.viewType,
+      new AssistantViewProvider(context, store, ai)
+    )
   );
 
   const markdownSelector: vscode.DocumentSelector = { language: "markdown", scheme: "file" };

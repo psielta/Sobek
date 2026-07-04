@@ -46,6 +46,13 @@
           "name": "Prompts",
           "icon": "media/sobek.svg",
           "contextualTitle": "Sobek: Prompts"
+        },
+        {
+          "id": "sobekAssistant",
+          "type": "webview",
+          "name": "Assistente IA",
+          "icon": "media/sobek.svg",
+          "contextualTitle": "Sobek: IA"
         }
       ]
     },
@@ -203,6 +210,17 @@
         "title": "Ver timeline da tarefa",
         "category": "Sobek",
         "icon": "$(list-ordered)"
+      },
+      {
+        "command": "sobek.refinePrompt",
+        "title": "Refinar prompt com Gemini",
+        "category": "Sobek",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "sobek.setGeminiApiKey",
+        "title": "Configurar chave Gemini",
+        "category": "Sobek"
       }
     ],
     "menus": {
@@ -258,6 +276,11 @@
           "command": "sobek.setTargetAgent",
           "when": "view == sobekPrompts",
           "group": "1_edit@3"
+        },
+        {
+          "command": "sobek.refinePrompt",
+          "when": "view == sobekPrompts",
+          "group": "1_edit@4"
         },
         {
           "command": "sobek.showPromptVersions",
@@ -338,6 +361,53 @@
           "type": "boolean",
           "default": true,
           "description": "Após criar um prompt filho, oferecer abrir um terminal com o agente alvo já executando o prompt."
+        },
+        "sobek.ai.model": {
+          "type": "string",
+          "default": "gemini-3.5-flash",
+          "enum": [
+            "gemini-3.5-flash",
+            "gemini-3.1-pro-preview",
+            "gemini-3.1-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-2.5-pro"
+          ],
+          "enumDescriptions": [
+            "Gemini 3.5 Flash (raciocínio por nível)",
+            "Gemini 3.1 Pro Preview (raciocínio por nível)",
+            "Gemini 3.1 Flash Lite (raciocínio por nível)",
+            "Gemini 2.5 Flash (raciocínio por budget de tokens)",
+            "Gemini 2.5 Pro (raciocínio por budget de tokens)"
+          ],
+          "description": "Modelo Gemini usado no refinamento de prompts e no chat."
+        },
+        "sobek.ai.temperature": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Temperatura das chamadas Gemini (0 a 2)."
+        },
+        "sobek.ai.thinkingEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Habilita raciocínio (thinking) nos modelos que permitem desativá-lo."
+        },
+        "sobek.ai.thinkingLevel": {
+          "type": "string",
+          "default": "high",
+          "enum": ["minimal", "low", "medium", "high"],
+          "description": "Nível de raciocínio para modelos Gemini 3.x."
+        },
+        "sobek.ai.thinkingBudget": {
+          "type": ["number", "null"],
+          "default": null,
+          "description": "Budget de tokens de raciocínio para modelos Gemini 2.5 (vazio usa um padrão)."
+        },
+        "sobek.ai.useWorkspaceContext": {
+          "type": "boolean",
+          "default": false,
+          "description": "Injeta README.md, CLAUDE.md e AGENT.md da raiz do workspace nas instruções de sistema do Gemini."
         }
       }
     }

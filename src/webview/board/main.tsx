@@ -31,14 +31,11 @@ interface VsCodeApi {
   setState(state: { viewMode?: ViewMode }): void;
 }
 
-declare global {
-  interface Window {
-    __SOBEK_STATE__: { columns: BoardColumn[] } | null;
-    acquireVsCodeApi(): VsCodeApi;
-  }
-}
-
-const vscode = window.acquireVsCodeApi();
+const host = window as unknown as {
+  __SOBEK_STATE__: { columns: BoardColumn[] } | null;
+  acquireVsCodeApi(): VsCodeApi;
+};
+const vscode = host.acquireVsCodeApi();
 
 type ViewMode = "kanban" | "vertical";
 type StatusFilter = "notArchived" | "Draft" | "Ready" | "Archived";
@@ -157,9 +154,7 @@ function Column({
 }
 
 function App() {
-  const [columns, setColumns] = useState<BoardColumn[]>(
-    window.__SOBEK_STATE__?.columns ?? []
-  );
+  const [columns, setColumns] = useState<BoardColumn[]>(host.__SOBEK_STATE__?.columns ?? []);
   const [viewMode, setViewMode] = useState<ViewMode>(vscode.getState()?.viewMode ?? "kanban");
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("notArchived");
