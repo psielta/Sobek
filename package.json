@@ -30,7 +30,160 @@
     "onStartupFinished"
   ],
   "contributes": {
-    "commands": [],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sobek",
+          "title": "Sobek",
+          "icon": "media/sobek.svg"
+        }
+      ]
+    },
+    "views": {
+      "sobek": [
+        {
+          "id": "sobekPrompts",
+          "name": "Prompts",
+          "icon": "media/sobek.svg",
+          "contextualTitle": "Sobek: Prompts"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "sobekPrompts",
+        "contents": "Nenhum prompt neste workspace ainda.\n[Criar prompt](command:sobek.createPrompt)\nOs prompts ficam versionados em `.sobek/` na raiz do workspace.",
+        "when": "sobek.hasWorkspace"
+      },
+      {
+        "view": "sobekPrompts",
+        "contents": "Abra uma pasta para usar o Sobek: o workspace aberto é o diretório alvo dos prompts.",
+        "when": "!sobek.hasWorkspace"
+      }
+    ],
+    "commands": [
+      {
+        "command": "sobek.createPrompt",
+        "title": "Novo prompt",
+        "category": "Sobek",
+        "icon": "$(add)"
+      },
+      {
+        "command": "sobek.refreshPrompts",
+        "title": "Recarregar prompts",
+        "category": "Sobek",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "sobek.openPrompt",
+        "title": "Abrir prompt",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.openChildPrompt",
+        "title": "Abrir prompt filho",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.copyPromptContent",
+        "title": "Copiar prompt",
+        "category": "Sobek",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "sobek.renamePrompt",
+        "title": "Renomear prompt",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.setPromptStatus",
+        "title": "Alterar status",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.setTargetAgent",
+        "title": "Alterar agente alvo",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.archivePrompt",
+        "title": "Arquivar prompt",
+        "category": "Sobek",
+        "icon": "$(archive)"
+      },
+      {
+        "command": "sobek.deletePrompt",
+        "title": "Excluir prompt",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.showPromptVersions",
+        "title": "Histórico de versões",
+        "category": "Sobek",
+        "icon": "$(history)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "sobek.createPrompt",
+          "when": "view == sobekPrompts",
+          "group": "navigation@1"
+        },
+        {
+          "command": "sobek.refreshPrompts",
+          "when": "view == sobekPrompts",
+          "group": "navigation@9"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "sobek.copyPromptContent",
+          "when": "view == sobekPrompts",
+          "group": "inline@1"
+        },
+        {
+          "command": "sobek.renamePrompt",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "1_edit@1"
+        },
+        {
+          "command": "sobek.setPromptStatus",
+          "when": "view == sobekPrompts",
+          "group": "1_edit@2"
+        },
+        {
+          "command": "sobek.setTargetAgent",
+          "when": "view == sobekPrompts",
+          "group": "1_edit@3"
+        },
+        {
+          "command": "sobek.showPromptVersions",
+          "when": "view == sobekPrompts",
+          "group": "2_info@1"
+        },
+        {
+          "command": "sobek.archivePrompt",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "3_danger@1"
+        },
+        {
+          "command": "sobek.deletePrompt",
+          "when": "view == sobekPrompts",
+          "group": "3_danger@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "sobek.openChildPrompt",
+          "when": "false"
+        },
+        {
+          "command": "sobek.openPrompt",
+          "when": "sobek.hasWorkspace"
+        }
+      ]
+    },
     "configuration": {
       "title": "Sobek"
     }

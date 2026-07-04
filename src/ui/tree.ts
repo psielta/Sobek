@@ -1,0 +1,93 @@
+import * as vscode from "vscode";
+import type { Prompt } from "../core/prompt";
+import { PROMPT_STATUS_LABELS, TARGET_AGENT_LABELS, isRootPrompt } from "../core/prompt";
+import type { PromptStore } from "../store/prompt-store";
+
+/**
+ * Sidebar tree: root prompts at the top level (the workspace listing never
+ * shows children), each child prompt nested under its parent.
+ */
+export class PromptTreeProvider implements vscode.TreeDataProvider<PromptTreeItem> {
+  private readonly emitter = new vscode.EventEmitter<PromptTreeItem | undefined>();
+  readonly onDidChangeTreeData = this.emitter.event;
+
+  constructor(private readonly store: PromptStore) {
+    store.onDidChange(() => this.refresh());
+  }
+
+  refresh(): void {
+    this.emitter.fire(undefined);
+  }
+
+  getTreeItem(element: PromptTreeItem): vscode.TreeItem {
+    return element;
+  }
+
+  getChildren(element?: PromptTreeItem): PromptTreeItem[] {
+    if (!element) {
+      return this.store.listRoots().map((prompt) => this.buildItem(prompt));
+    }
+    return this.store.listChildren(element.prompt.id).map((prompt) => this.buildItem(prompt));
+  }
+
+  private buildItem(prompt: Prompt): PromptTreeItem {
+    const isRoot = isRootPrompt(prompt);
+    const hasChildren = isRoot && this.store.listChildren(prompt.id).length > 0;
+    return new PromptTreeItem(prompt, isRoot, hasChildren);
+  }
+}
+
+export class PromptTreeItem extends vscode.TreeItem {
+  constructor(
+    public readonly prompt: Prompt,
+    isRoot: boolean,
+    hasChildren: boolean
+  ) {
+    super(
+      prompt.title || "(sem título)",
+      hasChildren
+        ? vscode.TreeItemCollapsibleState.Collapsed
+        : vscode.TreeItemCollapsibleState.None
+    );
+
+    this.id = prompt.id;
+    this.contextValue = isRoot ? "sobekRootPrompt" : "sobekChildPrompt";
+
+    const statusLabel = PROMPT_STATUS_LABELS[prompt.status];
+    const agentLabel = TARGET_AGENT_LABELS[prompt.targetAgent];
+    const phase = prompt.workflow?.currentPhaseName;
+    this.description = isRoot
+      ? [phase, statusLabel].filter(Boolean).join(" · ")
+      : `${statusLabel} · ${agentLabel}`;
+
+    this.tooltip = new vscode.MarkdownString(
+      [
+        `**${prompt.title || "(sem título)"}**`,
+        "",
+        `- Status: ${statusLabel}`,
+        `- Agente: ${agentLabel}`,
+        `- Versão: v${prompt.currentVersion}`,
+        phase ? `- Fase: ${phase} (${prompt.workflow?.status === "Done" ? "concluída" : "ativa"})` : undefined,
+        prompt.linkedPlan ? `- Plano: ${prompt.linkedPlan.displayName}` : undefined,
+      ]
+        .filter((line): line is string => line !== undefined)
+        .join("\n")
+    );
+
+    if (prompt.status === "Archived") {
+      this.iconPath = new vscode.ThemeIcon("archive", new vscode.ThemeColor("disabledForeground"));
+    } else if (!isRoot) {
+      this.iconPath = new vscode.ThemeIcon("git-branch");
+    } else {
+      this.iconPath = new vscode.ThemeIcon(
+        prompt.workflow?.status === "Done" ? "pass-filled" : "note"
+      );
+    }
+
+    // Product rule from Thoth: clicking a child opens a read-only preview in
+    // the parent's context, never the child's edit surface.
+    this.command = isRoot
+      ? { command: "sobek.openPrompt", title: "Abrir prompt", arguments: [prompt.id] }
+      : { command: "sobek.openChildPrompt", title: "Abrir prompt filho", arguments: [prompt.id] };
+  }
+}
