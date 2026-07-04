@@ -6,6 +6,11 @@ import {
 } from "./language/mention-features";
 import { PromptStore } from "./store/prompt-store";
 import { getWorkspaceRoot } from "./store/workspace";
+import { TerminalManager } from "./terminals/manager";
+import {
+  offerAgentTerminalForChild,
+  registerTerminalCommands,
+} from "./terminals/terminal-commands";
 import { CHILD_PREVIEW_SCHEME, ChildPromptPreviewProvider } from "./ui/child-preview";
 import { registerGenerateChildCommands } from "./ui/generate-child";
 import { registerPromptCommands } from "./ui/prompt-commands";
@@ -34,8 +39,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   );
 
+  const terminals = new TerminalManager(store, context);
+  store.onDidArchive((promptId) => terminals.killForPrompt(promptId));
+
   registerPromptCommands(context, store);
-  registerGenerateChildCommands(context, store);
+  registerGenerateChildCommands(context, store, (child) =>
+    offerAgentTerminalForChild(terminals, child)
+  );
+  registerTerminalCommands(context, store, terminals);
 
   const markdownSelector: vscode.DocumentSelector = { language: "markdown", scheme: "file" };
   context.subscriptions.push(

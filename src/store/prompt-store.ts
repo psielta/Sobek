@@ -67,6 +67,7 @@ export class PromptStore {
   private prompts = new Map<string, Prompt>();
   private settings: SobekSettings = DEFAULT_SETTINGS;
   private listeners = new Set<StoreListener>();
+  private archiveListeners = new Set<(promptId: string) => void>();
   private loaded = false;
 
   constructor(private readonly workspaceRoot: string) {}
@@ -90,6 +91,12 @@ export class PromptStore {
   onDidChange(listener: StoreListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /** Fired when a prompt transitions to Archived (side effects live outside). */
+  onDidArchive(listener: (promptId: string) => void): () => void {
+    this.archiveListeners.add(listener);
+    return () => this.archiveListeners.delete(listener);
   }
 
   private notify(): void {
@@ -321,12 +328,18 @@ export class PromptStore {
    */
   async updateStatus(id: string, status: PromptStatus): Promise<Prompt> {
     const prompt = this.require(id);
+    const previous = prompt.status;
     const now = new Date().toISOString();
     prompt.status = status;
     prompt.currentVersion += 1;
     prompt.updatedAt = now;
     await this.persist(prompt);
     await this.appendVersion(prompt, "Status changed");
+    if (status === "Archived" && previous !== "Archived") {
+      for (const listener of this.archiveListeners) {
+        listener(id);
+      }
+    }
     this.notify();
     return prompt;
   }

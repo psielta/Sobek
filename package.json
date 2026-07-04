@@ -138,6 +138,29 @@
         "command": "sobek.unlinkPlan",
         "title": "Desvincular plano",
         "category": "Sobek"
+      },
+      {
+        "command": "sobek.newPromptTerminal",
+        "title": "Novo terminal do prompt",
+        "category": "Sobek",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "sobek.launchAgentTerminal",
+        "title": "Iniciar agente no terminal",
+        "category": "Sobek",
+        "icon": "$(robot)"
+      },
+      {
+        "command": "sobek.runPromptInAgentTerminal",
+        "title": "Executar prompt no agente",
+        "category": "Sobek",
+        "icon": "$(play)"
+      },
+      {
+        "command": "sobek.newWorkspaceTerminal",
+        "title": "Novo terminal no workspace",
+        "category": "Sobek"
       }
     ],
     "menus": {
@@ -195,6 +218,21 @@
           "group": "2_info@1"
         },
         {
+          "command": "sobek.newPromptTerminal",
+          "when": "view == sobekPrompts",
+          "group": "2_terminal@1"
+        },
+        {
+          "command": "sobek.launchAgentTerminal",
+          "when": "view == sobekPrompts",
+          "group": "2_terminal@2"
+        },
+        {
+          "command": "sobek.runPromptInAgentTerminal",
+          "when": "view == sobekPrompts",
+          "group": "2_terminal@3"
+        },
+        {
           "command": "sobek.archivePrompt",
           "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
           "group": "3_danger@1"
@@ -217,7 +255,14 @@
       ]
     },
     "configuration": {
-      "title": "Sobek"
+      "title": "Sobek",
+      "properties": {
+        "sobek.terminals.showAgentTerminalOfferAfterChildPrompt": {
+          "type": "boolean",
+          "default": true,
+          "description": "Após criar um prompt filho, oferecer abrir um terminal com o agente alvo já executando o prompt."
+        }
+      }
     }
   },
   "scripts": {
