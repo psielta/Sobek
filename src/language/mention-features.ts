@@ -123,6 +123,48 @@ export class MentionDiagnostics {
   }
 }
 
+const MENTION_TOKEN_AT_CURSOR = /(^|[\s([{])@([\w./\\()-]*)$/;
+
+/**
+ * Keeps the suggest widget alive while typing OR deleting inside an `@`
+ * token. VS Code never re-queries providers on backspace and markdown has
+ * quick suggestions disabled, so once the widget closes (e.g. zero matches)
+ * it would stay closed until the user retyped the mention — this re-triggers
+ * it programmatically, giving the always-live search Claude Code has.
+ */
+export function registerMentionRetrigger(
+  context: vscode.ExtensionContext,
+  store: PromptStore
+): void {
+  let debounce: NodeJS.Timeout | undefined;
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument((event) => {
+      const editor = vscode.window.activeTextEditor;
+      if (
+        !editor ||
+        editor.document !== event.document ||
+        event.contentChanges.length === 0 ||
+        !isPromptDocument(store, event.document)
+      ) {
+        return;
+      }
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        const active = vscode.window.activeTextEditor;
+        if (!active || active.document !== event.document) {
+          return;
+        }
+        const position = active.selection.active;
+        const linePrefix = active.document.lineAt(position.line).text.slice(0, position.character);
+        if (MENTION_TOKEN_AT_CURSOR.test(linePrefix)) {
+          void vscode.commands.executeCommand("editor.action.triggerSuggest");
+        }
+      }, 50);
+    }),
+    new vscode.Disposable(() => clearTimeout(debounce))
+  );
+}
+
 /** Makes `@path` mentions clickable, opening the referenced file. */
 export class MentionLinkProvider implements vscode.DocumentLinkProvider {
   constructor(

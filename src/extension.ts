@@ -5,6 +5,7 @@ import {
   MentionCompletionProvider,
   MentionDiagnostics,
   MentionLinkProvider,
+  registerMentionRetrigger,
 } from "./language/mention-features";
 import { PromptStore } from "./store/prompt-store";
 import { getWorkspaceRoot } from "./store/workspace";
@@ -133,6 +134,7 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
     )
   );
   new MentionDiagnostics(store, workspaceRoot).register(context);
+  registerMentionRetrigger(context, store);
 }
 
 export function deactivate(): void {
