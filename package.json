@@ -121,6 +121,23 @@
         "title": "Histórico de versões",
         "category": "Sobek",
         "icon": "$(history)"
+      },
+      {
+        "command": "sobek.generateChildPrompt",
+        "title": "Gerar prompt filho",
+        "category": "Sobek",
+        "icon": "$(type-hierarchy-sub)"
+      },
+      {
+        "command": "sobek.linkPlan",
+        "title": "Vincular plano Markdown",
+        "category": "Sobek",
+        "icon": "$(link)"
+      },
+      {
+        "command": "sobek.unlinkPlan",
+        "title": "Desvincular plano",
+        "category": "Sobek"
       }
     ],
     "menus": {
@@ -141,6 +158,21 @@
           "command": "sobek.copyPromptContent",
           "when": "view == sobekPrompts",
           "group": "inline@1"
+        },
+        {
+          "command": "sobek.generateChildPrompt",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "0_generate@1"
+        },
+        {
+          "command": "sobek.linkPlan",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "0_generate@2"
+        },
+        {
+          "command": "sobek.unlinkPlan",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "0_generate@3"
         },
         {
           "command": "sobek.renamePrompt",

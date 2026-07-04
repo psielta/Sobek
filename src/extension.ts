@@ -7,6 +7,7 @@ import {
 import { PromptStore } from "./store/prompt-store";
 import { getWorkspaceRoot } from "./store/workspace";
 import { CHILD_PREVIEW_SCHEME, ChildPromptPreviewProvider } from "./ui/child-preview";
+import { registerGenerateChildCommands } from "./ui/generate-child";
 import { registerPromptCommands } from "./ui/prompt-commands";
 import { PromptTreeProvider } from "./ui/tree";
 
@@ -34,6 +35,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   registerPromptCommands(context, store);
+  registerGenerateChildCommands(context, store);
 
   const markdownSelector: vscode.DocumentSelector = { language: "markdown", scheme: "file" };
   context.subscriptions.push(
