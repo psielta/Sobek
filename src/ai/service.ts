@@ -1,12 +1,14 @@
 import * as vscode from "vscode";
+import { parseMentions } from "../core/mentions";
 import type { Prompt } from "../core/prompt";
 import type { PromptStore } from "../store/prompt-store";
-import { buildPromptContext } from "./context-builder";
+import { buildPromptContext, readSelectedFiles } from "./context-builder";
 import { GeminiClient, type GeminiMessage, type GeminiStreamChunk } from "./gemini-client";
 import {
   buildChatSystemInstruction,
   buildChatUserMessage,
   buildCustomInstructionsBlock,
+  buildMentionedFilesBlock,
   buildRefineSystemInstruction,
 } from "./instructions";
 import {
@@ -166,9 +168,20 @@ export class AiService {
       promptContent = derived ? `${prompt.content}\n\n${derived}` : prompt.content;
     }
 
+    // @file mentions typed in the chat message travel as inline context.
+    let userText = buildChatUserMessage(message, promptContent);
+    const mentionPaths = parseMentions(message).map((mention) => mention.raw);
+    if (mentionPaths.length > 0) {
+      const files = await readSelectedFiles(this.workspaceRoot, mentionPaths);
+      const block = buildMentionedFilesBlock(files);
+      if (block) {
+        userText = `${userText}\n\n${block}`;
+      }
+    }
+
     const messages: GeminiMessage[] = [
       ...history.map((turn) => ({ role: turn.role, text: turn.text })),
-      { role: "user" as const, text: buildChatUserMessage(message, promptContent) },
+      { role: "user" as const, text: userText },
     ];
     yield* client.stream({
       model: settings.model,

@@ -187,9 +187,15 @@ export class PromptStore {
 
   findByMarkdownPath(filePath: string): Prompt | undefined {
     this.ensureLoaded();
-    const normalized = path.resolve(filePath);
+    // Windows paths from the VS Code API vary in drive-letter casing, so the
+    // comparison must be case-insensitive there.
+    const normalize = (candidate: string): string => {
+      const resolved = path.resolve(candidate);
+      return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+    };
+    const normalized = normalize(filePath);
     for (const prompt of this.prompts.values()) {
-      if (path.resolve(this.promptMarkdownPath(prompt.id)) === normalized) {
+      if (normalize(this.promptMarkdownPath(prompt.id)) === normalized) {
         return prompt;
       }
     }

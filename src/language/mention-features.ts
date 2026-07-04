@@ -25,6 +25,23 @@ function isPromptDocument(store: PromptStore, document: vscode.TextDocument): bo
   );
 }
 
+const FIND_EXCLUDE = `{${[...IGNORED_DIRECTORIES].map((dir) => `**/${dir}/**`).join(",")}}`;
+
+/** Searches workspace files by path substring (not just file name). */
+export async function searchWorkspaceFiles(
+  workspaceRoot: string,
+  query: string,
+  limit: number
+): Promise<string[]> {
+  const uris = await vscode.workspace.findFiles("**/*", FIND_EXCLUDE, 2000);
+  const needle = query.trim().toLowerCase();
+  const relatives = uris
+    .map((uri) => path.relative(workspaceRoot, uri.fsPath).replace(/\\/g, "/"))
+    .filter((relative) => !needle || relative.toLowerCase().includes(needle))
+    .sort((a, b) => a.length - b.length || a.localeCompare(b));
+  return relatives.slice(0, limit);
+}
+
 /** `@` completion listing workspace files, like Thoth's TipTap mention picker. */
 export class MentionCompletionProvider implements vscode.CompletionItemProvider {
   constructor(
@@ -45,17 +62,14 @@ export class MentionCompletionProvider implements vscode.CompletionItemProvider 
       return undefined;
     }
     const query = match[2] ?? "";
-    const files = await vscode.workspace.findFiles(
-      query ? `**/*${query}*` : "**/*",
-      `{${[...IGNORED_DIRECTORIES].map((dir) => `**/${dir}/**`).join(",")}}`,
-      200
-    );
+    const relatives = await searchWorkspaceFiles(this.workspaceRoot, query, 300);
     const replaceStart = position.character - query.length;
     const range = new vscode.Range(position.line, replaceStart, position.line, position.character);
-    return files.map((uri) => {
-      const relative = path.relative(this.workspaceRoot, uri.fsPath).replace(/\\/g, "/");
+    return relatives.map((relative) => {
       const item = new vscode.CompletionItem(relative, vscode.CompletionItemKind.File);
       item.insertText = relative;
+      // Filter on the whole relative path so typing "src/ma" keeps matching.
+      item.filterText = relative;
       item.range = range;
       item.detail = "Menção de arquivo do workspace";
       return item;

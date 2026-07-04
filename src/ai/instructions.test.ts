@@ -84,7 +84,7 @@ describe("context blocks", () => {
 
   it("renders mentioned files, linked plan and parent prompt blocks", () => {
     expect(buildMentionedFilesBlock([{ name: "src/x.ts", content: "y" }])).toContain(
-      "## Arquivos mencionados no prompt"
+      "## Arquivos mencionados"
     );
     expect(buildLinkedPlanBlock("plano.md", "# Plano")).toBe(
       "## Plano vinculado (plano.md)\n\n# Plano"

@@ -93,15 +93,15 @@ export function buildCustomInstructionsBlock(text: string): string | undefined {
   return `## Instruções adicionais do usuário\n\nAo refinar, siga estas instruções:\n${trimmed}`;
 }
 
-/** Files the prompt already references via @mentions — Sobek-specific. */
+/** Files referenced via @mentions (in the prompt or in a chat message). */
 export function buildMentionedFilesBlock(files: NamedContent[]): string | undefined {
   if (files.length === 0) {
     return undefined;
   }
   const sections = files.map((file) => `### ${file.name}\n\n${file.content}`);
   return [
-    "## Arquivos mencionados no prompt",
-    "O prompt referencia os arquivos abaixo com @menções; use-os como contexto.",
+    "## Arquivos mencionados",
+    "Os arquivos abaixo foram referenciados com @menções; use-os como contexto.",
     ...sections,
   ].join("\n\n");
 }

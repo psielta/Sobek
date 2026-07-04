@@ -240,6 +240,47 @@ details summary {
   display: flex;
   gap: 6px;
   align-items: flex-end;
+  position: relative;
+}
+
+.mention-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin: 0 0 4px;
+  padding: 4px;
+  list-style: none;
+  max-height: 180px;
+  overflow-y: auto;
+  background: var(--vscode-editorSuggestWidget-background, var(--vscode-editorWidget-background));
+  border: 1px solid var(--vscode-editorSuggestWidget-border, var(--vscode-panel-border));
+  border-radius: 6px;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.mention-dropdown li {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mention-dropdown li.active,
+.mention-dropdown li:hover {
+  background: var(
+    --vscode-editorSuggestWidget-selectedBackground,
+    var(--vscode-list-activeSelectionBackground)
+  );
+  color: var(
+    --vscode-editorSuggestWidget-selectedForeground,
+    var(--vscode-list-activeSelectionForeground)
+  );
 }
 
 .chat-input textarea {

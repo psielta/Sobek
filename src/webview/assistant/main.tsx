@@ -41,6 +41,25 @@ interface LiveMessage {
   thoughts: string;
 }
 
+interface MentionState {
+  /** Offset of the char right after the "@" in the textarea value. */
+  start: number;
+  query: string;
+  items: string[];
+  active: number;
+}
+
+/** Finds an "@query" token ending at the cursor, like the editor provider. */
+function findMentionToken(value: string, cursor: number): { start: number; query: string } | undefined {
+  const prefix = value.slice(0, cursor);
+  const match = /(^|[\s([{])@([\w./\\-]*)$/.exec(prefix);
+  if (!match) {
+    return undefined;
+  }
+  const query = match[2] ?? "";
+  return { start: cursor - query.length, query };
+}
+
 function App() {
   const initial = host.__SOBEK_STATE__;
   const [history, setHistory] = useState<ChatTurn[]>(initial?.history ?? []);
@@ -50,7 +69,11 @@ function App() {
   const [live, setLive] = useState<LiveMessage | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  const [mention, setMention] = useState<MentionState | undefined>();
   const endRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const searchSeq = useRef(0);
+  const searchTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -61,8 +84,19 @@ function App() {
         message?: string;
         history?: ChatTurn[];
         settings?: AiSettings;
+        files?: string[];
+        requestId?: number;
       };
       switch (message.type) {
+        case "fileResults":
+          if (message.requestId === searchSeq.current) {
+            setMention((current) =>
+              current
+                ? { ...current, items: message.files ?? [], active: 0 }
+                : current
+            );
+          }
+          break;
         case "init":
           setHistory(message.history ?? []);
           setSettings(message.settings);
@@ -118,6 +152,80 @@ function App() {
     }
     vscode.postMessage({ type: "send", text: input, includePromptContext: includeContext });
     setInput("");
+    setMention(undefined);
+  };
+
+  const updateMention = (value: string, cursor: number) => {
+    const token = findMentionToken(value, cursor);
+    if (!token) {
+      setMention(undefined);
+      return;
+    }
+    setMention((current) => ({
+      start: token.start,
+      query: token.query,
+      items: current?.start === token.start ? current.items : [],
+      active: current?.start === token.start ? current.active : 0,
+    }));
+    window.clearTimeout(searchTimer.current);
+    searchTimer.current = window.setTimeout(() => {
+      searchSeq.current += 1;
+      vscode.postMessage({
+        type: "searchFiles",
+        query: token.query,
+        requestId: searchSeq.current,
+      });
+    }, 120);
+  };
+
+  const applyMention = (file: string) => {
+    if (!mention) {
+      return;
+    }
+    const cursor = textareaRef.current?.selectionStart ?? input.length;
+    const next = `${input.slice(0, mention.start)}${file} ${input.slice(cursor)}`;
+    setInput(next);
+    setMention(undefined);
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        const position = mention.start + file.length + 1;
+        textarea.focus();
+        textarea.setSelectionRange(position, position);
+      }
+    });
+  };
+
+  const onInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mention && mention.items.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setMention({ ...mention, active: (mention.active + 1) % mention.items.length });
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setMention({
+          ...mention,
+          active: (mention.active - 1 + mention.items.length) % mention.items.length,
+        });
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        applyMention(mention.items[mention.active]);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMention(undefined);
+        return;
+      }
+    }
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      send();
+    }
   };
 
   return (
@@ -187,17 +295,33 @@ function App() {
           Incluir prompt atual como contexto
         </label>
         <div className="chat-input-row">
+          {mention && mention.items.length > 0 && (
+            <ul className="mention-dropdown">
+              {mention.items.map((file, index) => (
+                <li
+                  key={file}
+                  className={index === mention.active ? "active" : undefined}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    applyMention(file);
+                  }}
+                >
+                  {file}
+                </li>
+              ))}
+            </ul>
+          )}
           <textarea
+            ref={textareaRef}
             value={input}
             rows={3}
-            placeholder="Pergunte ao assistente... (Ctrl+Enter envia)"
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-                event.preventDefault();
-                send();
-              }
+            placeholder="Pergunte ao assistente... @ menciona arquivos (Ctrl+Enter envia)"
+            onChange={(event) => {
+              setInput(event.target.value);
+              updateMention(event.target.value, event.target.selectionStart ?? 0);
             }}
+            onKeyDown={onInputKeyDown}
+            onBlur={() => window.setTimeout(() => setMention(undefined), 150)}
           />
           {busy ? (
             <button onClick={() => vscode.postMessage({ type: "stop" })}>Parar</button>

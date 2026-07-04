@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { buildChatUserMessage } from "../ai/instructions";
 import type { AiService, ChatTurn } from "../ai/service";
+import { searchWorkspaceFiles } from "../language/mention-features";
 import type { PromptStore } from "../store/prompt-store";
 import { buildWebviewHtml } from "../lib/webview-html";
 
@@ -54,8 +55,15 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
     type: string;
     text?: string;
     includePromptContext?: boolean;
+    query?: string;
+    requestId?: number;
   }): Promise<void> {
     switch (message.type) {
+      case "searchFiles": {
+        const files = await searchWorkspaceFiles(this.store.root, message.query ?? "", 20);
+        this.post({ type: "fileResults", requestId: message.requestId, files });
+        break;
+      }
       case "ready":
         this.post({
           type: "init",
