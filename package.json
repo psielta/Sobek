@@ -121,7 +121,8 @@
       {
         "command": "sobek.deletePrompt",
         "title": "Excluir prompt",
-        "category": "Sobek"
+        "category": "Sobek",
+        "icon": "$(trash)"
       },
       {
         "command": "sobek.showPromptVersions",
@@ -249,22 +250,42 @@
         },
         {
           "command": "sobek.generateChildPrompt",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
+          "group": "inline@2"
+        },
+        {
+          "command": "sobek.linkPlan",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt-noplan",
+          "group": "inline@3"
+        },
+        {
+          "command": "sobek.archivePrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
+          "group": "inline@4"
+        },
+        {
+          "command": "sobek.deletePrompt",
+          "when": "view == sobekPrompts",
+          "group": "inline@5"
+        },
+        {
+          "command": "sobek.generateChildPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "0_generate@1"
         },
         {
           "command": "sobek.linkPlan",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt-noplan",
           "group": "0_generate@2"
         },
         {
           "command": "sobek.unlinkPlan",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt-plan",
           "group": "0_generate@3"
         },
         {
           "command": "sobek.renamePrompt",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "1_edit@1"
         },
         {
@@ -304,37 +325,37 @@
         },
         {
           "command": "sobek.showTimeline",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "2_workflow@1"
         },
         {
           "command": "sobek.addWorkflowNote",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "2_workflow@2"
         },
         {
           "command": "sobek.addReviewVerdict",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "2_workflow@3"
         },
         {
           "command": "sobek.changeWorkflowActor",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "2_workflow@4"
         },
         {
           "command": "sobek.completeWorkflow",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "2_workflow@5"
         },
         {
           "command": "sobek.reopenWorkflow",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "2_workflow@6"
         },
         {
           "command": "sobek.archivePrompt",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "3_danger@1"
         },
         {

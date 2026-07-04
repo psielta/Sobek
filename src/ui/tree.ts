@@ -51,7 +51,11 @@ export class PromptTreeItem extends vscode.TreeItem {
     );
 
     this.id = prompt.id;
-    this.contextValue = isRoot ? "sobekRootPrompt" : "sobekChildPrompt";
+    // Faceted context value drives conditional inline actions (e.g. "link
+    // plan" only when no plan is linked yet).
+    this.contextValue = isRoot
+      ? `sobekRootPrompt-${prompt.linkedPlan ? "plan" : "noplan"}`
+      : "sobekChildPrompt";
 
     const statusLabel = PROMPT_STATUS_LABELS[prompt.status];
     const agentLabel = TARGET_AGENT_LABELS[prompt.targetAgent];
@@ -74,13 +78,17 @@ export class PromptTreeItem extends vscode.TreeItem {
         .join("\n")
     );
 
+    // Ready prompts get a green icon so the status is visible at a glance.
+    const readyColor =
+      prompt.status === "Ready" ? new vscode.ThemeColor("charts.green") : undefined;
     if (prompt.status === "Archived") {
       this.iconPath = new vscode.ThemeIcon("archive", new vscode.ThemeColor("disabledForeground"));
     } else if (!isRoot) {
-      this.iconPath = new vscode.ThemeIcon("git-branch");
+      this.iconPath = new vscode.ThemeIcon("git-branch", readyColor);
     } else {
       this.iconPath = new vscode.ThemeIcon(
-        prompt.workflow?.status === "Done" ? "pass-filled" : "note"
+        prompt.workflow?.status === "Done" ? "pass-filled" : "note",
+        readyColor
       );
     }
 
