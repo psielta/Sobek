@@ -12,6 +12,10 @@ function isPromptDocument(store: PromptStore, document: vscode.TextDocument): bo
 
 /** `@` completion listing workspace files, like Thoth's TipTap mention picker. */
 export class MentionCompletionProvider implements vscode.CompletionItemProvider {
+  private lastResult:
+    | { uri: string; version: number; query: string; list: vscode.CompletionList }
+    | undefined;
+
   constructor(
     private readonly store: PromptStore,
     private readonly index: WorkspaceFileIndex
@@ -30,6 +34,18 @@ export class MentionCompletionProvider implements vscode.CompletionItemProvider 
       return undefined;
     }
     const query = match[2] ?? "";
+
+    // The native isIncomplete re-query and the retrigger listener can both
+    // fire for the same keystroke; serve the second call from cache.
+    const cached = this.lastResult;
+    if (
+      cached &&
+      cached.uri === document.uri.toString() &&
+      cached.version === document.version &&
+      cached.query === query
+    ) {
+      return cached.list;
+    }
     const replaceStart = position.character - query.length;
     const range = new vscode.Range(position.line, replaceStart, position.line, position.character);
 
@@ -48,7 +64,14 @@ export class MentionCompletionProvider implements vscode.CompletionItemProvider 
     // on every keystroke (typing and deleting), so each response only needs
     // the best matches — shipping thousands of items per key was the lag.
     const ranked = await this.index.search(query, 100);
-    return new vscode.CompletionList(ranked.map(buildItem), true);
+    const list = new vscode.CompletionList(ranked.map(buildItem), true);
+    this.lastResult = {
+      uri: document.uri.toString(),
+      version: document.version,
+      query,
+      list,
+    };
+    return list;
   }
 }
 

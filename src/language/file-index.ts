@@ -28,6 +28,7 @@ export class WorkspaceFileIndex {
   private files = new Set<string>();
   private loading: Promise<void> | undefined;
   private sortedCache: string[] | undefined;
+  private arrayCache: string[] | undefined;
 
   constructor(private readonly workspaceRoot: string) {}
 
@@ -60,6 +61,7 @@ export class WorkspaceFileIndex {
     if (relative) {
       this.files.add(relative);
       this.sortedCache = undefined;
+      this.arrayCache = undefined;
     }
   }
 
@@ -77,6 +79,7 @@ export class WorkspaceFileIndex {
       }
     }
     this.sortedCache = undefined;
+    this.arrayCache = undefined;
   }
 
   private ensureLoaded(): Promise<void> {
@@ -97,11 +100,15 @@ export class WorkspaceFileIndex {
     this.files.clear();
     this.loading = undefined;
     this.sortedCache = undefined;
+    this.arrayCache = undefined;
   }
 
   async search(query: string, limit: number): Promise<string[]> {
     await this.ensureLoaded();
-    return rankPaths(query, [...this.files], limit);
+    if (!this.arrayCache) {
+      this.arrayCache = [...this.files];
+    }
+    return rankPaths(query, this.arrayCache, limit);
   }
 
   /** Every indexed path, shallow-first then alphabetical (cached). */

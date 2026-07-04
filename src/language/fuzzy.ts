@@ -77,6 +77,36 @@ function computeCharScore(
   return score;
 }
 
+/**
+ * Cheap in-order subsequence check — the prefilter that keeps the scorer
+ * instant: most candidates die here in O(target) instead of running the
+ * O(query × target) matrix.
+ */
+function isSubsequence(queryLower: string, targetLower: string): boolean {
+  let queryIndex = 0;
+  for (let targetIndex = 0; targetIndex < targetLower.length; targetIndex++) {
+    const queryChar = queryLower[queryIndex];
+    const targetChar = targetLower[targetIndex];
+    if (
+      queryChar === targetChar ||
+      ((queryChar === "/" || queryChar === "\\") && (targetChar === "/" || targetChar === "\\"))
+    ) {
+      queryIndex++;
+      if (queryIndex === queryLower.length) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// Scratch buffers reused across scorer calls: every cell is written before it
+// is read, so no clearing is needed and per-call allocations disappear.
+let scratchScores: number[] = [];
+let scratchMatches: number[] = [];
+
+const MAX_TARGET_LENGTH = 256;
+
 /** VS Code's scorer matrix; returns 0 when the query is not a subsequence. */
 function scoreFuzzyRaw(target: string, query: string): number {
   if (!target || !query) {
@@ -84,14 +114,22 @@ function scoreFuzzyRaw(target: string, query: string): number {
   }
   const targetLength = target.length;
   const queryLength = query.length;
-  if (targetLength < queryLength) {
+  if (targetLength < queryLength || targetLength > MAX_TARGET_LENGTH) {
     return NO_MATCH;
   }
   const queryLower = query.toLowerCase();
   const targetLower = target.toLowerCase();
+  if (!isSubsequence(queryLower, targetLower)) {
+    return NO_MATCH;
+  }
 
-  const scores: number[] = [];
-  const matches: number[] = [];
+  const cells = queryLength * targetLength;
+  if (scratchScores.length < cells) {
+    scratchScores = new Array(cells);
+    scratchMatches = new Array(cells);
+  }
+  const scores = scratchScores;
+  const matches = scratchMatches;
 
   for (let queryIndex = 0; queryIndex < queryLength; queryIndex++) {
     const queryIndexOffset = queryIndex * targetLength;

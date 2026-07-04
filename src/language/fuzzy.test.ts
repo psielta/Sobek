@@ -65,4 +65,17 @@ describe("rankPaths", () => {
   it("respects the limit", () => {
     expect(rankPaths("", files, 2)).toHaveLength(2);
   });
+
+  it("ranks 20k paths well under a keystroke budget", () => {
+    const big: string[] = [];
+    for (let index = 0; index < 20_000; index++) {
+      big.push(`src/module-${index % 50}/feature-${index % 200}/file-${index}.ts`);
+    }
+    const start = performance.now();
+    const results = rankPaths("feature-12", big, 100);
+    const elapsed = performance.now() - start;
+    expect(results.length).toBe(100);
+    // Generous CI budget; locally this sits in single-digit milliseconds.
+    expect(elapsed).toBeLessThan(150);
+  });
 });
