@@ -396,11 +396,19 @@
         "sobek.ai.thinkingLevel": {
           "type": "string",
           "default": "high",
-          "enum": ["minimal", "low", "medium", "high"],
+          "enum": [
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ],
           "description": "Nível de raciocínio para modelos Gemini 3.x."
         },
         "sobek.ai.thinkingBudget": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "default": null,
           "description": "Budget de tokens de raciocínio para modelos Gemini 2.5 (vazio usa um padrão)."
         },
@@ -431,6 +439,8 @@
     "eslint": "^9.18.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "vitest": "^2.1.8"

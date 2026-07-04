@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import "./assistant.css";
 
 interface ChatTurn {
@@ -145,7 +147,13 @@ function App() {
         )}
         {history.map((turn, index) => (
           <div key={index} className={`msg msg-${turn.role}`}>
-            <pre>{turn.text}</pre>
+            {turn.role === "model" ? (
+              <div className="markdown">
+                <Markdown remarkPlugins={[remarkGfm]}>{turn.text}</Markdown>
+              </div>
+            ) : (
+              <pre>{turn.text}</pre>
+            )}
           </div>
         ))}
         {live && (
@@ -156,7 +164,13 @@ function App() {
                 <pre className="thoughts">{live.thoughts}</pre>
               </details>
             )}
-            <pre>{live.answer || "…"}</pre>
+            {live.answer ? (
+              <div className="markdown">
+                <Markdown remarkPlugins={[remarkGfm]}>{live.answer}</Markdown>
+              </div>
+            ) : (
+              <pre>…</pre>
+            )}
           </div>
         )}
         {error && <div className="chat-error">{error}</div>}
