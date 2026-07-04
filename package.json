@@ -2,7 +2,7 @@
   "name": "sobek",
   "displayName": "Sobek",
   "description": "%ext.description%",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "psielta",
   "license": "MIT",
   "repository": {
@@ -475,19 +475,39 @@
         "sobek.terminals.claudeEffort": {
           "type": "string",
           "default": "ask",
-          "enum": ["ask", "default", "low", "medium", "high", "xhigh", "max"],
+          "enum": [
+            "ask",
+            "default",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
           "description": "%config.claudeEffort%"
         },
         "sobek.terminals.grokEffort": {
           "type": "string",
           "default": "default",
-          "enum": ["ask", "default", "low", "medium", "high", "xhigh", "max"],
+          "enum": [
+            "ask",
+            "default",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
           "description": "%config.grokEffort%"
         },
         "sobek.terminals.location": {
           "type": "string",
           "default": "ask",
-          "enum": ["ask", "panel", "editor"],
+          "enum": [
+            "ask",
+            "panel",
+            "editor"
+          ],
           "description": "%config.terminalLocation%"
         },
         "sobek.terminals.stageDelayMs": {
@@ -523,11 +543,19 @@
         "sobek.ai.thinkingLevel": {
           "type": "string",
           "default": "high",
-          "enum": ["minimal", "low", "medium", "high"],
+          "enum": [
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ],
           "description": "%config.aiThinkingLevel%"
         },
         "sobek.ai.thinkingBudget": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "default": null,
           "description": "%config.aiThinkingBudget%"
         },
