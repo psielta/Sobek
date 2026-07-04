@@ -3,6 +3,7 @@
 .github/**
 .env
 *.vsix
+README.pt-br.md
 src/**
 node_modules/**
 esbuild.mjs

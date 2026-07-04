@@ -1,7 +1,7 @@
 <h1 align="center">🐊 Sobek</h1>
 
 <p align="center">
-  <strong>Workbench de engenharia de prompts para agentes de código, dentro do VS Code.</strong>
+  <strong>Prompt engineering workbench for AI coding agents, inside VS Code.</strong>
 </p>
 
 <p align="center">
@@ -11,114 +11,126 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
 </p>
 
-Sobek é uma extensão do VS Code para criar, versionar e acompanhar prompts em Markdown usados com agentes de desenvolvimento como **Claude Code**, **Codex** e **Grok** — sem sair do editor. O workspace aberto no VS Code já é o diretório alvo: os prompts referenciam os arquivos reais do projeto, os terminais nascem na raiz do repositório e o board kanban acompanha cada tarefa da engenharia do prompt até o merge.
+<p align="center">🇧🇷 <a href="https://github.com/psielta/Sobek/blob/main/README.pt-br.md">Versão em português</a></p>
 
-O projeto porta o **core** do [Thoth](https://github.com/psielta/gerenciamento-de-tarefas-definidas-por-prompt) (aplicação full-stack ASP.NET Core + React) para uma arquitetura 100% local de extensão: sem backend, sem banco — o estado vive em arquivos versionáveis dentro de `.sobek/` no próprio workspace.
+Sobek is a VS Code extension to create, version and track Markdown prompts used with development agents like **Claude Code**, **Codex** and **Grok** — without leaving the editor. The open VS Code workspace is the target directory: prompts reference the project's real files, terminals spawn at the repository root, and a kanban board tracks each task from prompt engineering to merge.
 
-> Na mitologia egípcia, Sobek é o guardião de fronteiras — aqui, o guardião dos seus prompts, na fronteira entre você e os agentes.
+The project ports the **core** of [Thoth](https://github.com/psielta/gerenciamento-de-tarefas-definidas-por-prompt) (a full-stack ASP.NET Core + React application) to a 100% local extension architecture: no backend, no database — state lives in versionable files under `.sobek/` in the workspace itself.
 
-## Recursos
+> In Egyptian mythology, Sobek guards boundaries — here, the guardian of your prompts, at the boundary between you and the agents.
 
-### 📝 Prompts como cidadãos de primeira classe
-- Prompts em Markdown editados no editor nativo do VS Code, com **histórico de versões imutável** a cada alteração de conteúdo ou status (`Rascunho`, `Pronto`, `Arquivado`).
-- **Menções `@arquivo`** com autocomplete dos arquivos do workspace, validação em tempo real (diagnostics para referências quebradas ou que escapam do diretório) e links clicáveis.
-- Sidebar com os prompts **pai** da tarefa; prompts filhos aparecem aninhados e abrem em **preview somente leitura** — o contexto de edição é sempre o do pai.
+## Features
 
-### 🌱 Prompts filhos gerados por template
-- Vincule um **plano Markdown** (ex.: plano gerado pelo Claude Code em plan-mode) a um prompt raiz.
-- Gere prompts auxiliares a partir de **9 templates** portados do Thoth: revisar plano (com ou sem o prompt pai como contexto), re-review, implementar (inclusive em worktree), revisar PR, re-review de PR com a resposta do Codex, rebase e merge.
-- Referências de PR são resolvidas em cascata (input → PR salva no plano) e persistidas para a próxima geração.
-- **Templates personalizados por workspace**: crie os seus em `.sobek/templates/<slug>.md` (comando *Criar template personalizado* gera o esqueleto). Frontmatter define nome, agente alvo, `targetPhaseRole` opcional (avanço automático da fase do pai) e inputs próprios; o corpo usa os placeholders `{AbsolutePath}`, `{DisplayName}`, `{ParentPromptContent}`, `{PullRequestReference}` e `{input:chave}`. Os arquivos recarregam ao salvar e são versionáveis no git.
+### 📝 Prompts as first-class citizens
+- Markdown prompts edited in VS Code's native editor, with an **immutable version history** on every content or status change (`Draft`, `Ready`, `Archived`).
+- **`@file` mentions** with workspace file autocomplete (VS Code's own fuzzy scorer), real-time validation (diagnostics for broken references or paths escaping the workspace), clickable links and themed highlighting — in the editor, the child prompt preview and the rendered Markdown preview.
+- Sidebar listing the **parent** prompts of each task; child prompts appear nested and open in a **read-only preview** — the editing context is always the parent's.
 
-### 📋 Kanban de workflow
-- Cada prompt raiz é uma tarefa com **workflow de 10 fases** (Engenharia de prompt → Planejamento → Revisão do plano → ... → Commit/Merge), snapshot próprio de fases, responsável atual (Você/Claude/Codex/Grok) e timeline append-only.
-- Board em webview React com **drag-and-drop** entre fases, modos kanban/vertical, filtros por texto/status/fluxo e ações no cartão (gerar filho, avançar, nota, arquivar).
-- **Transições automáticas**: criar um prompt filho de template move o pai para a fase correspondente; re-reviews incrementam a iteração (`re-review #2`); vereditos de revisão movem a tarefa para a fase de correção.
+### 🌱 Template-generated child prompts
+- Link a **Markdown plan** (e.g. a plan produced by Claude Code in plan mode) to a root prompt — from anywhere on disk.
+- Generate auxiliary prompts from **9 templates** ported from Thoth: review plan (with or without the parent prompt as context), re-review, implement (including in a worktree), review PR, re-review PR with Codex's response, rebase and merge.
+- PR references resolve in a cascade (input → PR stored on the plan) and persist for the next generation.
+- **Workspace-defined custom templates**: author your own in `.sobek/templates/<slug>.md` (the *Create Custom Child Template* command scaffolds one). Frontmatter defines name, target agent, an optional `targetPhaseRole` (automatic parent phase advance) and custom inputs; the body uses the `{AbsolutePath}`, `{DisplayName}`, `{ParentPromptContent}`, `{PullRequestReference}` and `{input:key}` placeholders. Files hot-reload on save and are git-versionable.
 
-### 🖥️ Terminais por prompt
-- Terminais nativos do VS Code abertos na raiz do workspace, associados ao prompt, com nome e cor por agente.
-- Lançamento rápido de **Claude, Claude Plan, Codex e Grok** com os flags corretos; o conteúdo do prompt é achatado para uma linha e submetido ao CLI — ou, no plan-mode, preenchido como **rascunho não enviado** para revisão.
-- Arquivar um prompt encerra seus terminais; após criar um prompt filho, o Sobek oferece abrir o agente alvo já executando o prompt.
+### 📋 Workflow kanban
+- Every root prompt is a task with a **10-phase workflow** (Prompt engineering → Planning → Plan review → ... → Commit/Merge), its own phase snapshot, a current owner (You/Claude/Codex/Grok) and an append-only timeline. Default phase names follow the VS Code display language.
+- React webview board with **drag-and-drop** between phases, kanban/vertical modes, text/status/workflow filters and card actions (run, generate child, advance, note, archive).
+- **Automatic transitions**: creating a templated child prompt moves the parent to the matching phase; re-reviews increment the iteration (`re-review #2`); review verdicts move the task to the correction phase.
 
-### ✨ IA com Gemini
-- **Refinar prompt**: envia o conteúdo para o Gemini com instrução de sistema especializada, mostra o resultado como **diff** e só aplica com confirmação (gerando nova versão).
-- **Assistente de engenharia de prompts** na sidebar, com streaming de resposta (incluindo o raciocínio do modelo), opção de anexar o prompt aberto como contexto e atalhos para configuração.
-- Modelos Gemini 3.5/3.1/2.5 com raciocínio por **nível** ou **budget de tokens**, temperatura configurável, contexto opcional do workspace (`README.md`, `CLAUDE.md`, `AGENT.md`) e chave de API guardada em **SecretStorage** — nunca em arquivos do projeto.
+### 🖥️ Per-prompt terminals
+- Native VS Code terminals opened at the workspace root, bound to the prompt, named and colored per agent — in the terminal panel or as **editor tabs**, your choice.
+- Quick launch for **Claude, Claude Plan, Codex and Grok** with the right flags — `--effort` (up to `xhigh`/`max`) is your call per launch or pinned in settings.
+- Pick the **execution mode** per run: submit now (prompt passed as a CLI argument — it can never arrive truncated), stage as an unsent draft, Claude plan mode (`--permission-mode plan`) or just open the agent.
+- A **Terminals view** groups every session by root prompt (child prompt terminals show under the parent with a "Child" badge); archiving a prompt kills its terminals; after creating a child prompt, Sobek offers to run it immediately.
 
-## Como funciona
+### 📊 Agent usage indicators
+- Status bar meters for **Claude Code and Codex usage limits**, read from the agents' local sources (Claude OAuth + Anthropic usage API; Codex session JSONL rate-limit snapshots).
+- 5-hour, 7-day and per-model weekly windows (e.g. the Fable cap) with reset times; amber/red backgrounds at 70%/90%; click for the full breakdown panel.
+- Activity-aware polling: wakes when you launch agents, sleeps when idle, refreshes the Codex meter as its sessions write.
+
+### ✨ AI with Gemini
+- **Refine prompt**: sends the content to Gemini with a specialized system instruction, shows the result as a **diff** and only applies on confirmation (creating a new version).
+- **Prompt engineering assistant** in the sidebar, with streaming responses (including the model's reasoning), Markdown rendering, `@file` mentions with autocomplete, and the active prompt attached as context — visibly, via a context chip.
+- Rich context injection (all toggleable): workspace convention files (`README.md`, `CLAUDE.md`, `AGENT.md`, `AGENTS.md`, `GEMINI.md`, Copilot instructions), files `@mentioned` in the prompt, the linked plan, the parent prompt, task workflow state and opt-in git context.
+- Gemini 3.5/3.1/2.5 models with level- or budget-based reasoning, configurable temperature, and the API key stored in **SecretStorage** — never in project files.
+
+## How it works
 
 ```text
 <workspace>/
   .sobek/
-    settings.json              Template global de fases do workflow
+    settings.json              Global workflow phase template
+    templates/<slug>.md        Workspace-defined child prompt templates
     prompts/<id>/
-      meta.json                Metadados, workflow (fases, timeline) e menções
-      prompt.md                Conteúdo Markdown (edite no próprio VS Code)
-      versions.json            Snapshots imutáveis de cada versão
+      meta.json                Metadata, workflow (phases, timeline) and mentions
+      prompt.md                Markdown content (edit it right in VS Code)
+      versions.json            Immutable snapshots of every version
 ```
 
-Sem serviços externos além da Gemini API (opcional). O diretório `.sobek/` pode ser commitado para compartilhar as tarefas com o time — ou ignorado, se preferir prompts locais.
+No external services beyond the (optional) Gemini API. The `.sobek/` directory can be committed to share tasks with your team — or ignored for local-only prompts.
 
-## Arquitetura
+## Architecture
 
 ```text
 src/
-  core/        Domínio puro (prompt, workflow, templates, menções) — 100% testável
-  store/       Persistência em arquivos (.sobek/) com escrita atômica
-  terminals/   Semântica de agentes + gerenciador sobre a API nativa de terminais
-  ai/          Cliente Gemini (REST + SSE), catálogo de modelos, instruções de sistema
-  ui/          Tree view, comandos, board panel, chat view, refinamento
-  webview/     Apps React (board kanban e assistente), tema via variáveis do VS Code
+  core/        Pure domain (prompt, workflow, templates, mentions) — fully unit-tested
+  store/       File-backed persistence (.sobek/) with atomic writes
+  terminals/   Agent launch semantics + manager over the native terminal API
+  usage/       Claude/Codex usage limit readers
+  ai/          Gemini client (REST + SSE), model catalog, system instructions
+  language/    @mention completions, diagnostics, decorations, fuzzy file index
+  ui/          Tree views, commands, board panel, chat view, refinement
+  webview/     React apps (kanban board and assistant), themed via VS Code CSS vars
 ```
 
-Princípios:
+Principles:
 
-- **Domínio puro separado do host**: regras de workflow/templates são funções sem dependência do VS Code, cobertas por testes unitários (Vitest).
-- **Paridade comportamental com o Thoth**: enums, fases, textos de template, instruções de sistema e semântica de terminal foram portados verbatim.
-- **Zero dependências de runtime**: o pacote publica apenas os bundles do esbuild; React existe só nos webviews.
+- **Pure domain separated from the host**: workflow/template rules are functions with no VS Code dependency, covered by unit tests (Vitest).
+- **Behavioral parity with Thoth**: enums, phases, template texts, system instructions and terminal semantics were ported verbatim.
+- **Zero runtime dependencies**: the package ships only esbuild bundles; React exists only inside the webviews.
+- **Localized**: UI follows the VS Code display language (English/Portuguese) via `package.nls`, `vscode.l10n` and webview dictionaries.
 
-## Desenvolvimento
+## Development
 
-Pré-requisitos: Node.js 22+ e VS Code 1.96+.
+Prerequisites: Node.js 22+ and VS Code 1.96+.
 
 ```powershell
 git clone https://github.com/psielta/Sobek.git
 cd Sobek
 npm install
-npm run build      # bundla extensão + webviews (esbuild)
+npm run build      # bundles extension + webviews (esbuild)
 ```
 
-Abra a pasta no VS Code e pressione **F5** (Run Extension) para carregar a extensão em uma janela de desenvolvimento.
+Open the folder in VS Code and press **F5** (Run Extension) to load the extension in a development window.
 
-Validação:
+Validation:
 
 ```powershell
-npm run test       # Vitest (domínio, store, templates, agentes)
+npm run test       # Vitest (domain, store, templates, agents, usage)
 npm run typecheck  # tsc --noEmit (strict)
 npm run lint       # eslint
-npm run package    # gera o .vsix com @vscode/vsce
+npm run package    # builds the .vsix with @vscode/vsce
 ```
 
-Para usar a IA: `Ctrl+Shift+P` → **Sobek: Configurar chave Gemini** (obtenha a chave em [aistudio.google.com/apikey](https://aistudio.google.com/apikey)). Sem chave, o restante da extensão funciona normalmente.
+To use the AI: `Ctrl+Shift+P` → **Sobek: Set Gemini API Key** (get one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)). Without a key, everything else works normally.
 
-## Relação com o Thoth
+## Relationship to Thoth
 
 | | Thoth | Sobek |
 |---|---|---|
-| Plataforma | ASP.NET Core + React (navegador) | Extensão VS Code |
-| Persistência | PostgreSQL + EF Core | Arquivos em `.sobek/` |
-| Workspace | Cadastro de diretórios | A pasta aberta no VS Code |
-| Terminais | ConPTY + SignalR + xterm.js | API nativa de terminais |
-| Tempo real | SignalR | Eventos do extension host |
-| IA | Gemini via backend | Gemini direto do extension host |
+| Platform | ASP.NET Core + React (browser) | VS Code extension |
+| Persistence | PostgreSQL + EF Core | Files under `.sobek/` |
+| Workspace | Directory registration | The folder open in VS Code |
+| Terminals | ConPTY + SignalR + xterm.js | Native terminal API |
+| Real time | SignalR | Extension host events |
+| AI | Gemini via backend | Gemini from the extension host |
 
 ## Roadmap
 
-- Watcher do plano vinculado com versionamento automático (paridade com os *linked documents* do Thoth).
-- Timeline visual da tarefa em webview.
-- Numeração de tarefas configurável (`TaskNumberPattern`).
-- Publicação no Marketplace / Open VSX.
+- Linked plan watcher with automatic versioning (parity with Thoth's linked documents).
+- Visual task timeline webview.
+- Configurable task numbering (`TaskNumberPattern`).
 
-## Licença
+## License
 
 [MIT](LICENSE)
