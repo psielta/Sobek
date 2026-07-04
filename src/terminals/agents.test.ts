@@ -1,17 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
-  AGENT_COMMANDS,
   AGENT_TAB_DEFAULTS,
+  buildAgentCommand,
   flattenPromptForCli,
   needsLeadingCharStaging,
 } from "./agents";
 
 describe("agent launch commands", () => {
-  it("matches Thoth's exact CLI invocations", () => {
-    expect(AGENT_COMMANDS.Claude).toBe("claude --dangerously-skip-permissions --effort max");
-    expect(AGENT_COMMANDS.ClaudePlan).toBe("claude --dangerously-skip-permissions --effort max");
-    expect(AGENT_COMMANDS.Codex).toBe("codex --yolo");
-    expect(AGENT_COMMANDS.Grok).toBe("grok --always-approve");
+  it("matches Thoth's invocation when effort max is chosen", () => {
+    expect(buildAgentCommand("Claude", "max")).toBe(
+      "claude --dangerously-skip-permissions --effort max"
+    );
+    expect(buildAgentCommand("ClaudePlan", "max")).toBe(
+      "claude --dangerously-skip-permissions --effort max"
+    );
+  });
+
+  it("omits --effort when the user keeps the CLI default", () => {
+    expect(buildAgentCommand("Claude")).toBe("claude --dangerously-skip-permissions");
+    expect(buildAgentCommand("Claude", "low")).toBe(
+      "claude --dangerously-skip-permissions --effort low"
+    );
+  });
+
+  it("keeps Codex and Grok invocations fixed", () => {
+    expect(buildAgentCommand("Codex")).toBe("codex --yolo");
+    expect(buildAgentCommand("Grok")).toBe("grok --always-approve");
   });
 
   it("keeps the agent tab defaults", () => {

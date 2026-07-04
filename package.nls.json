@@ -35,6 +35,7 @@
   "cmd.refinePrompt": "Refine Prompt with Gemini",
   "cmd.setGeminiApiKey": "Set Gemini API Key",
   "config.showAgentTerminalOffer": "After creating a child prompt, offer to open a terminal with the target agent already running the prompt.",
+  "config.claudeEffort": "Claude's --effort flag on terminal launches: \"ask\" prompts every time, \"default\" omits the flag, or pin low/medium/high/max.",
   "config.aiModel": "Gemini model used for prompt refinement and chat.",
   "config.aiTemperature": "Temperature for Gemini calls (0 to 2).",
   "config.aiThinkingEnabled": "Enables thinking on models that allow disabling it.",

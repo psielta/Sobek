@@ -5,14 +5,27 @@
 
 export type AgentKind = "Claude" | "ClaudePlan" | "Codex" | "Grok";
 
-const CLAUDE_BASE_FLAGS = "--dangerously-skip-permissions --effort max";
+export type ClaudeEffort = "low" | "medium" | "high" | "max";
 
-export const AGENT_COMMANDS: Record<AgentKind, string> = {
-  Claude: `claude ${CLAUDE_BASE_FLAGS}`,
-  ClaudePlan: `claude ${CLAUDE_BASE_FLAGS}`,
-  Codex: "codex --yolo",
-  Grok: "grok --always-approve",
-};
+export const CLAUDE_EFFORTS: ClaudeEffort[] = ["low", "medium", "high", "max"];
+
+const CLAUDE_BASE_COMMAND = "claude --dangerously-skip-permissions";
+
+/**
+ * CLI invocation per agent. Claude's --effort flag is optional: omitted, the
+ * CLI uses its own default (Thoth always sent --effort max; Sobek lets the
+ * user choose).
+ */
+export function buildAgentCommand(agent: AgentKind, claudeEffort?: ClaudeEffort): string {
+  switch (agent) {
+    case "Codex":
+      return "codex --yolo";
+    case "Grok":
+      return "grok --always-approve";
+    default:
+      return claudeEffort ? `${CLAUDE_BASE_COMMAND} --effort ${claudeEffort}` : CLAUDE_BASE_COMMAND;
+  }
+}
 
 export interface AgentTabDefaults {
   name: string;

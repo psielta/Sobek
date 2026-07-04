@@ -460,6 +460,12 @@
           "default": true,
           "description": "%config.showAgentTerminalOffer%"
         },
+        "sobek.terminals.claudeEffort": {
+          "type": "string",
+          "default": "ask",
+          "enum": ["ask", "default", "low", "medium", "high", "max"],
+          "description": "%config.claudeEffort%"
+        },
         "sobek.ai.model": {
           "type": "string",
           "default": "gemini-3.5-flash",

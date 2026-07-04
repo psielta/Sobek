@@ -2,8 +2,51 @@ import * as vscode from "vscode";
 import type { Prompt, TargetAgent } from "../core/prompt";
 import type { PromptStore } from "../store/prompt-store";
 import type { PromptTreeItem } from "../ui/tree";
-import type { AgentKind } from "./agents";
+import { CLAUDE_EFFORTS, type AgentKind, type ClaudeEffort } from "./agents";
 import { TerminalManager } from "./manager";
+
+/**
+ * Resolves the --effort flag for Claude launches. The sobek.terminals
+ * .claudeEffort setting can pin a value ("default" omits the flag); "ask"
+ * (the default) prompts on every Claude launch. Returns undefined when the
+ * user cancels the picker, aborting the launch.
+ */
+async function resolveClaudeEffort(
+  agent: AgentKind
+): Promise<{ effort?: ClaudeEffort } | undefined> {
+  if (agent !== "Claude" && agent !== "ClaudePlan") {
+    return {};
+  }
+  const configured = vscode.workspace
+    .getConfiguration("sobek.terminals")
+    .get<string>("claudeEffort", "ask");
+  if (configured === "default") {
+    return {};
+  }
+  if ((CLAUDE_EFFORTS as string[]).includes(configured)) {
+    return { effort: configured as ClaudeEffort };
+  }
+
+  const picked = await vscode.window.showQuickPick(
+    [
+      {
+        label: vscode.l10n.t("Claude default (no --effort)"),
+        description: "claude --dangerously-skip-permissions",
+        effort: undefined as ClaudeEffort | undefined,
+      },
+      ...CLAUDE_EFFORTS.map((effort) => ({
+        label: effort,
+        description: `--effort ${effort}`,
+        effort: effort as ClaudeEffort | undefined,
+      })),
+    ],
+    { placeHolder: vscode.l10n.t("Claude effort level for this terminal") }
+  );
+  if (!picked) {
+    return undefined;
+  }
+  return { effort: picked.effort };
+}
 
 type PromptRef = string | PromptTreeItem | undefined;
 
@@ -27,7 +70,7 @@ function agentPicks(): Array<{ label: string; description: string; agent: AgentK
   return [
     {
       label: "Claude",
-      description: "claude --dangerously-skip-permissions --effort max",
+      description: "claude --dangerously-skip-permissions [--effort ...]",
       agent: "Claude",
     },
     {
@@ -79,7 +122,11 @@ export function registerTerminalCommands(
       if (!agent) {
         return;
       }
-      await manager.create({ prompt, agent });
+      const effort = await resolveClaudeEffort(agent);
+      if (!effort) {
+        return;
+      }
+      await manager.create({ prompt, agent, claudeEffort: effort.effort });
     }),
 
     vscode.commands.registerCommand("sobek.runPromptInAgentTerminal", async (ref: PromptRef) => {
@@ -104,7 +151,16 @@ export function registerTerminalCommands(
       if (!picked) {
         return;
       }
-      await manager.create({ prompt, agent: picked.agent, submitPrompt: true });
+      const effort = await resolveClaudeEffort(picked.agent);
+      if (!effort) {
+        return;
+      }
+      await manager.create({
+        prompt,
+        agent: picked.agent,
+        submitPrompt: true,
+        claudeEffort: effort.effort,
+      });
     }),
 
     vscode.commands.registerCommand("sobek.newWorkspaceTerminal", async () => {
@@ -118,7 +174,16 @@ export function registerTerminalCommands(
       if (!agent) {
         return;
       }
-      await manager.create({ agent: (agent as { agent?: AgentKind }).agent });
+      const kind = (agent as { agent?: AgentKind }).agent;
+      if (kind) {
+        const effort = await resolveClaudeEffort(kind);
+        if (!effort) {
+          return;
+        }
+        await manager.create({ agent: kind, claudeEffort: effort.effort });
+        return;
+      }
+      await manager.create({});
     })
   );
 }
@@ -167,5 +232,9 @@ export async function offerAgentTerminalForChild(
     agent = picked.agent;
   }
 
-  await manager.create({ prompt: child, agent, submitPrompt: true });
+  const effort = await resolveClaudeEffort(agent);
+  if (!effort) {
+    return;
+  }
+  await manager.create({ prompt: child, agent, submitPrompt: true, claudeEffort: effort.effort });
 }

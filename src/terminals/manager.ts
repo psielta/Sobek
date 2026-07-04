@@ -4,13 +4,14 @@ import type { PromptStore } from "../store/prompt-store";
 import { findPhaseByRole, setPhase } from "../core/workflow";
 import {
   AGENT_COMMAND_DELAY_MS,
-  AGENT_COMMANDS,
   AGENT_TAB_DEFAULTS,
+  buildAgentCommand,
   CLAUDE_PLAN_FOLLOW_UP_DELAY_MS,
   flattenPromptForCli,
   needsLeadingCharStaging,
   SLASH_STAGING_DELAY_MS,
   type AgentKind,
+  type ClaudeEffort,
 } from "./agents";
 
 export const MAX_SESSIONS_PER_PROMPT = 8;
@@ -79,6 +80,7 @@ export class TerminalManager {
     prompt?: Prompt;
     agent?: AgentKind;
     submitPrompt?: boolean;
+    claudeEffort?: ClaudeEffort;
   }): Promise<vscode.Terminal | undefined> {
     const { prompt, agent } = options;
 
@@ -112,7 +114,7 @@ export class TerminalManager {
     if (agent) {
       this.onAgentLaunch?.();
       await delay(AGENT_COMMAND_DELAY_MS);
-      terminal.sendText(AGENT_COMMANDS[agent], true);
+      terminal.sendText(buildAgentCommand(agent, options.claudeEffort), true);
 
       const content = prompt ? flattenPromptForCli(prompt.content) : "";
       if (agent === "ClaudePlan" && content) {
