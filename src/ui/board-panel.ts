@@ -150,7 +150,12 @@ export class BoardPanel {
     context: vscode.ExtensionContext,
     private readonly store: PromptStore
   ) {
-    panel.iconPath = vscode.Uri.joinPath(context.extensionUri, "media", "sobek.svg");
+    // Webview tab icons are not theme-masked like activity bar icons, so the
+    // panel needs explicit light/dark variants.
+    panel.iconPath = {
+      light: vscode.Uri.joinPath(context.extensionUri, "media", "sobek-light.svg"),
+      dark: vscode.Uri.joinPath(context.extensionUri, "media", "sobek-dark.svg"),
+    };
     panel.webview.html = buildWebviewHtml({
       webview: panel.webview,
       extensionUri: context.extensionUri,
