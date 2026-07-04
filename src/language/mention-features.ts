@@ -10,15 +10,6 @@ function isPromptDocument(store: PromptStore, document: vscode.TextDocument): bo
   );
 }
 
-/**
- * Below this many indexed files the provider hands VS Code the FULL list once
- * per session (isIncomplete=false): the native suggest filter then handles
- * typing AND deleting. VS Code only re-queries isIncomplete providers on
- * typing, never on backspace, so a server-side-limited list strands stale
- * results when characters are deleted.
- */
-const MAX_EAGER_ITEMS = 15_000;
-
 /** `@` completion listing workspace files, like Thoth's TipTap mention picker. */
 export class MentionCompletionProvider implements vscode.CompletionItemProvider {
   constructor(
@@ -53,13 +44,10 @@ export class MentionCompletionProvider implements vscode.CompletionItemProvider 
       return item;
     };
 
-    const all = await this.index.all();
-    if (all.length <= MAX_EAGER_ITEMS) {
-      return new vscode.CompletionList(all.map(buildItem), false);
-    }
-
-    // Huge workspaces: fall back to server-side ranking with re-query on type.
-    const ranked = await this.index.search(query, 1000);
+    // Small ranked payload per invocation: the retrigger listener re-queries
+    // on every keystroke (typing and deleting), so each response only needs
+    // the best matches — shipping thousands of items per key was the lag.
+    const ranked = await this.index.search(query, 100);
     return new vscode.CompletionList(ranked.map(buildItem), true);
   }
 }
@@ -146,6 +134,12 @@ export function registerMentionRetrigger(
         event.contentChanges.length === 0 ||
         !isPromptDocument(store, event.document)
       ) {
+        return;
+      }
+      // Only single-character typing/deletions keep the search alive;
+      // accepting a completion or pasting must not reopen the widget.
+      const isKeystroke = event.contentChanges.every((change) => change.text.length <= 1);
+      if (!isKeystroke) {
         return;
       }
       clearTimeout(debounce);
