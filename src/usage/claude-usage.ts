@@ -124,6 +124,7 @@ export async function fetchClaudeUsage(options: ClaudeUsageOptions = {}): Promis
   });
 
   if (!response.ok) {
+    const body = (await response.text().catch(() => "")).slice(0, 200);
     const error =
       response.status === 401
         ? "auth-expired"
@@ -131,7 +132,7 @@ export async function fetchClaudeUsage(options: ClaudeUsageOptions = {}): Promis
           ? "forbidden"
           : response.status === 429
             ? "rate-limited"
-            : `http-${response.status}`;
+            : `http-${response.status}${body ? `: ${body}` : ""}`;
     return {
       fiveHour: { utilization: 0, resetsAt: null },
       sevenDay: { utilization: 0, resetsAt: null },

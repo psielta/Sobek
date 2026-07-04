@@ -125,5 +125,8 @@
   "No usage API permission (403).": "Sem permissão na API de uso (403).",
   "Rate limited — will retry later.": "Limite de requisições atingido — tentará novamente depois.",
   "No Codex usage data found. Use the Codex CLI with a ChatGPT subscription.": "Nenhum dado de uso do Codex encontrado. Use o Codex CLI com uma assinatura ChatGPT.",
-  "Usage error: {0}": "Erro ao ler uso: {0}"
+  "Usage error: {0}": "Erro ao ler uso: {0}",
+  "Agent usage limits": "Limites de uso dos agentes",
+  "Refresh now": "Atualizar agora",
+  "Usage settings": "Configurações de uso"
 }

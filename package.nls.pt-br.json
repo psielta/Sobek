@@ -47,6 +47,7 @@
   "config.aiIncludeWorkflowContext": "Inclui o estado da tarefa (fase atual, responsável, últimas notas) como contexto da IA.",
   "config.aiIncludeGitContext": "Inclui branch atual e últimos commits do repositório como contexto da IA.",
   "cmd.refreshAgentUsage": "Atualizar uso dos agentes",
+  "cmd.showAgentUsage": "Ver uso dos agentes",
   "cmd.revealTerminal": "Mostrar terminal",
   "cmd.killTerminal": "Encerrar terminal",
   "cmd.openTerminalPrompt": "Abrir prompt",

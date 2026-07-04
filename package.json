@@ -242,6 +242,12 @@
         "icon": "$(pulse)"
       },
       {
+        "command": "sobek.showAgentUsage",
+        "title": "%cmd.showAgentUsage%",
+        "category": "Sobek",
+        "icon": "$(dashboard)"
+      },
+      {
         "command": "sobek.revealTerminal",
         "title": "%cmd.revealTerminal%",
         "category": "Sobek"

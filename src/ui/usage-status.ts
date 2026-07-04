@@ -58,18 +58,24 @@ export class UsageStatusBar {
   private pollTimer: NodeJS.Timeout | undefined;
   private lastActivity = 0;
   private refreshing = false;
+  private lastClaude: AgentUsage | undefined;
+  private lastCodex: AgentUsage | undefined;
 
   constructor(context: vscode.ExtensionContext) {
     this.claudeItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     this.codexItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
-    this.claudeItem.command = "sobek.refreshAgentUsage";
-    this.codexItem.command = "sobek.refreshAgentUsage";
+    this.claudeItem.command = "sobek.showAgentUsage";
+    this.codexItem.command = "sobek.showAgentUsage";
     context.subscriptions.push(
       this.claudeItem,
       this.codexItem,
       vscode.commands.registerCommand("sobek.refreshAgentUsage", () => {
         this.recordActivity();
         void this.refresh();
+      }),
+      vscode.commands.registerCommand("sobek.showAgentUsage", () => {
+        this.recordActivity();
+        void this.showPanel();
       }),
       new vscode.Disposable(() => this.stopPolling())
     );
@@ -174,10 +180,90 @@ export class UsageStatusBar {
         ),
       ]);
 
+      this.lastClaude = claude;
+      this.lastCodex = codex;
       this.render(this.claudeItem, "Claude", claude);
       this.render(this.codexItem, "Codex", codex);
     } finally {
       this.refreshing = false;
+    }
+  }
+
+  /** Click widget: usage breakdown for both agents plus quick actions. */
+  private async showPanel(): Promise<void> {
+    if (!this.lastClaude && !this.lastCodex) {
+      await this.refresh();
+    }
+
+    type Item = vscode.QuickPickItem & { action?: "refresh" | "settings" };
+    const items: Item[] = [];
+
+    const section = (label: string, usage: AgentUsage | undefined): void => {
+      items.push({ label, kind: vscode.QuickPickItemKind.Separator });
+      if (!usage) {
+        items.push({ label: `$(sync~spin) ${vscode.l10n.t("Reading {0} usage...", label)}` });
+        return;
+      }
+      if (!usage.limitsAvailable) {
+        items.push({
+          label: `$(warning) ${errorLabel(usage.error ?? "no-data")}`,
+        });
+        if (usage.tokenUsage) {
+          items.push({
+            label: `$(symbol-number) ${vscode.l10n.t(
+              "Session tokens: {0}",
+              usage.tokenUsage.totalTokens.toLocaleString()
+            )}`,
+          });
+        }
+        return;
+      }
+      const windowItem = (icon: string, name: string, window: UsageWindow): Item => {
+        const reset = formatReset(window.resetsAt);
+        return {
+          label: `$(${icon}) ${name}: ${Math.round(window.utilization)}%`,
+          description: reset ? vscode.l10n.t("resets {0}", reset) : undefined,
+        };
+      };
+      items.push(windowItem("dashboard", vscode.l10n.t("5-hour window"), usage.fiveHour));
+      items.push(windowItem("calendar", vscode.l10n.t("7-day window"), usage.sevenDay));
+      if (usage.sevenDayOpus) {
+        items.push(
+          windowItem("sparkle", vscode.l10n.t("7-day window (Opus)"), usage.sevenDayOpus)
+        );
+      }
+      if (usage.tokenUsage) {
+        items.push({
+          label: `$(symbol-number) ${vscode.l10n.t(
+            "Session tokens: {0}",
+            usage.tokenUsage.totalTokens.toLocaleString()
+          )}`,
+        });
+      }
+    };
+
+    section("Claude Code", this.lastClaude);
+    section("Codex", this.lastCodex);
+
+    items.push({ label: "", kind: vscode.QuickPickItemKind.Separator });
+    items.push({ label: `$(refresh) ${vscode.l10n.t("Refresh now")}`, action: "refresh" });
+    items.push({ label: `$(gear) ${vscode.l10n.t("Usage settings")}`, action: "settings" });
+
+    const updatedAt = this.lastClaude?.lastUpdated ?? this.lastCodex?.lastUpdated;
+    const picked = await vscode.window.showQuickPick(items, {
+      title: vscode.l10n.t("Agent usage limits"),
+      placeHolder: updatedAt
+        ? vscode.l10n.t(
+            "Updated {0} — click to refresh",
+            new Date(updatedAt).toLocaleTimeString(vscode.env.language)
+          )
+        : undefined,
+    });
+    if (picked?.action === "refresh") {
+      await this.refresh();
+      void this.showPanel();
+    } else if (picked?.action === "settings") {
+      await vscode.commands.executeCommand("workbench.action.openSettings", "sobek.usage");
     }
   }
 
