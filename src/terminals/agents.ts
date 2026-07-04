@@ -30,6 +30,46 @@ export function buildAgentCommand(agent: AgentKind, effort?: EffortLevel): strin
   }
 }
 
+export type ShellFlavor = "powershell" | "posix";
+
+/** Quotes a single CLI argument for the target shell. */
+export function quoteForShell(text: string, shell: ShellFlavor): string {
+  if (shell === "powershell") {
+    return `'${text.replace(/'/g, "''")}'`;
+  }
+  return `'${text.replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * Full launch command with the prompt as a CLI ARGUMENT — all three CLIs
+ * accept a positional prompt (`claude [prompt]`, `codex [PROMPT]`,
+ * `grok [PROMPT]`). This is the reliable path for "run now" and plan mode:
+ * typing into a booting TUI raced its readiness and truncated prompts, while
+ * an argument can never be cut off. Plan mode uses
+ * `claude --permission-mode plan` (without --dangerously-skip-permissions —
+ * plan mode reviews before executing).
+ */
+export function buildAgentRunCommand(
+  agent: AgentKind,
+  prompt: string,
+  shell: ShellFlavor,
+  effort?: EffortLevel
+): string {
+  const quoted = quoteForShell(flattenPromptForCli(prompt), shell);
+  switch (agent) {
+    case "Codex":
+      return `codex --yolo ${quoted}`;
+    case "Grok":
+      return `${buildAgentCommand("Grok", effort)} ${quoted}`;
+    case "ClaudePlan": {
+      const effortFlag = effort ? ` --effort ${effort}` : "";
+      return `claude${effortFlag} --permission-mode plan ${quoted}`;
+    }
+    default:
+      return `${buildAgentCommand("Claude", effort)} ${quoted}`;
+  }
+}
+
 export interface AgentTabDefaults {
   name: string;
   color: string;
@@ -44,12 +84,6 @@ export const AGENT_TAB_DEFAULTS: Record<AgentKind, AgentTabDefaults> = {
   Codex: { name: "Codex", color: "#16c60c", themeColor: "terminal.ansiGreen" },
   Grok: { name: "Grok", color: "#ff8c00", themeColor: "terminal.ansiYellow" },
 };
-
-/** Delay before the agent command is written to a fresh shell (ms). */
-export const AGENT_COMMAND_DELAY_MS = 500;
-
-/** Extra delay before the ClaudePlan draft is staged after the command (ms). */
-export const CLAUDE_PLAN_FOLLOW_UP_DELAY_MS = 2000;
 
 /** Gap after the leading '/' or '#' so CLI autocomplete registers it (ms). */
 export const SLASH_STAGING_DELAY_MS = 25;

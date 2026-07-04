@@ -3,21 +3,57 @@ import type { Prompt } from "../core/prompt";
 import type { PromptStore } from "../store/prompt-store";
 import { findPhaseByRole, setPhase } from "../core/workflow";
 import {
-  AGENT_COMMAND_DELAY_MS,
   AGENT_TAB_DEFAULTS,
   buildAgentCommand,
-  CLAUDE_PLAN_FOLLOW_UP_DELAY_MS,
+  buildAgentRunCommand,
   flattenPromptForCli,
   needsLeadingCharStaging,
   SLASH_STAGING_DELAY_MS,
   type AgentKind,
   type EffortLevel,
+  type ShellFlavor,
 } from "./agents";
 
 export const MAX_SESSIONS_PER_PROMPT = 8;
 
+const SHELL_READY_TIMEOUT_MS = 3000;
+const STAGE_CHUNK_SIZE = 180;
+const STAGE_CHUNK_DELAY_MS = 15;
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function detectShellFlavor(): ShellFlavor {
+  const shell = vscode.env.shell.toLowerCase();
+  if (shell.includes("pwsh") || shell.includes("powershell")) {
+    return "powershell";
+  }
+  return process.platform === "win32" ? "powershell" : "posix";
+}
+
+/**
+ * Waits until the terminal's shell reports ready via shell integration (or a
+ * timeout fallback). Blind fixed delays raced slow shell startups and cut off
+ * whatever was typed next.
+ */
+function waitForShellReady(terminal: vscode.Terminal): Promise<void> {
+  if (terminal.shellIntegration) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      listener.dispose();
+      resolve();
+    }, SHELL_READY_TIMEOUT_MS);
+    const listener = vscode.window.onDidChangeTerminalShellIntegration((event) => {
+      if (event.terminal === terminal) {
+        clearTimeout(timer);
+        listener.dispose();
+        resolve();
+      }
+    });
+  });
 }
 
 export interface ManagedTerminal {
@@ -117,18 +153,26 @@ export class TerminalManager {
 
     if (agent) {
       this.onAgentLaunch?.();
-      await delay(AGENT_COMMAND_DELAY_MS);
-      terminal.sendText(buildAgentCommand(agent, options.effort), true);
+      await waitForShellReady(terminal);
+      const content = prompt?.content.trim() ? prompt.content : "";
+      const shell = detectShellFlavor();
 
-      const content = prompt ? flattenPromptForCli(prompt.content) : "";
       if (agent === "ClaudePlan" && content) {
-        // Draft only: staged into the CLI without Enter so the user reviews it.
-        await delay(CLAUDE_PLAN_FOLLOW_UP_DELAY_MS);
-        await this.writeStaged(terminal, content, false);
+        // Plan mode with the prompt as a CLI argument: nothing to type into a
+        // booting TUI, so the prompt can never be cut off.
+        terminal.sendText(buildAgentRunCommand("ClaudePlan", content, shell, options.effort), true);
         await this.tryEnterPlanMode(prompt);
-      } else if ((options.submitPrompt || options.stagePrompt) && content) {
-        await delay(CLAUDE_PLAN_FOLLOW_UP_DELAY_MS);
-        await this.writeStaged(terminal, content, options.submitPrompt === true);
+      } else if (options.submitPrompt && content) {
+        terminal.sendText(buildAgentRunCommand(agent, content, shell, options.effort), true);
+      } else {
+        terminal.sendText(buildAgentCommand(agent, options.effort), true);
+        if (options.stagePrompt && content) {
+          const stageDelay = vscode.workspace
+            .getConfiguration("sobek.terminals")
+            .get<number>("stageDelayMs", 3000);
+          await delay(Math.max(500, stageDelay));
+          await this.writeStaged(terminal, flattenPromptForCli(content));
+        }
       }
     }
 
@@ -136,21 +180,24 @@ export class TerminalManager {
   }
 
   /**
-   * Writes prompt text to the CLI. Leading `/` or `#` is staged alone first so
-   * the agent's autocomplete registers the slash command / memory shortcut.
+   * Stages prompt text into a running CLI without Enter. Leading `/` or `#`
+   * goes alone first (so autocomplete registers it) and the rest streams in
+   * small chunks — long single writes raced the TUI's input handling and
+   * arrived truncated.
    */
-  private async writeStaged(
-    terminal: vscode.Terminal,
-    content: string,
-    submit: boolean
-  ): Promise<void> {
+  private async writeStaged(terminal: vscode.Terminal, content: string): Promise<void> {
+    let rest = content;
     if (needsLeadingCharStaging(content)) {
       terminal.sendText(content[0], false);
       await delay(SLASH_STAGING_DELAY_MS);
-      terminal.sendText(content.slice(1), submit);
-      return;
+      rest = content.slice(1);
     }
-    terminal.sendText(content, submit);
+    for (let offset = 0; offset < rest.length; offset += STAGE_CHUNK_SIZE) {
+      terminal.sendText(rest.slice(offset, offset + STAGE_CHUNK_SIZE), false);
+      if (offset + STAGE_CHUNK_SIZE < rest.length) {
+        await delay(STAGE_CHUNK_DELAY_MS);
+      }
+    }
   }
 
   /**

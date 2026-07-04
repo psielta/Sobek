@@ -483,6 +483,12 @@
           "enum": ["ask", "default", "low", "medium", "high", "xhigh", "max"],
           "description": "%config.grokEffort%"
         },
+        "sobek.terminals.stageDelayMs": {
+          "type": "number",
+          "default": 3000,
+          "minimum": 500,
+          "description": "%config.stageDelay%"
+        },
         "sobek.ai.model": {
           "type": "string",
           "default": "gemini-3.5-flash",

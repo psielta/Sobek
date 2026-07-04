@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   AGENT_TAB_DEFAULTS,
   buildAgentCommand,
+  buildAgentRunCommand,
   flattenPromptForCli,
   needsLeadingCharStaging,
+  quoteForShell,
 } from "./agents";
 
 describe("agent launch commands", () => {
@@ -41,6 +43,35 @@ describe("agent launch commands", () => {
     expect(AGENT_TAB_DEFAULTS.ClaudePlan).toMatchObject({ name: "Claude Plan", color: "#5b4b8a" });
     expect(AGENT_TAB_DEFAULTS.Codex).toMatchObject({ name: "Codex", color: "#16c60c" });
     expect(AGENT_TAB_DEFAULTS.Grok).toMatchObject({ name: "Grok", color: "#ff8c00" });
+  });
+});
+
+describe("quoteForShell", () => {
+  it("escapes single quotes per shell flavor", () => {
+    expect(quoteForShell("it's fine", "powershell")).toBe("'it''s fine'");
+    expect(quoteForShell("it's fine", "posix")).toBe("'it'\\''s fine'");
+    expect(quoteForShell('com "aspas" e $var', "powershell")).toBe("'com \"aspas\" e $var'");
+  });
+});
+
+describe("buildAgentRunCommand", () => {
+  it("passes the flattened prompt as a quoted CLI argument", () => {
+    expect(buildAgentRunCommand("Claude", "linha 1\nlinha 2", "powershell", "max")).toBe(
+      "claude --dangerously-skip-permissions --effort max 'linha 1 linha 2'"
+    );
+    expect(buildAgentRunCommand("Codex", "faça x", "powershell")).toBe("codex --yolo 'faça x'");
+    expect(buildAgentRunCommand("Grok", "faça x", "posix", "high")).toBe(
+      "grok --always-approve --effort high 'faça x'"
+    );
+  });
+
+  it("uses --permission-mode plan without skip-permissions for plan mode", () => {
+    expect(buildAgentRunCommand("ClaudePlan", "planeje isso", "powershell", "xhigh")).toBe(
+      "claude --effort xhigh --permission-mode plan 'planeje isso'"
+    );
+    expect(buildAgentRunCommand("ClaudePlan", "planeje isso", "powershell")).toBe(
+      "claude --permission-mode plan 'planeje isso'"
+    );
   });
 });
 
