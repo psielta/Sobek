@@ -43,5 +43,9 @@
   "config.aiIncludeLinkedPlan": "Include the prompt's linked plan content as AI context.",
   "config.aiIncludeParentPrompt": "When working on a child prompt, include the parent prompt content as AI context.",
   "config.aiIncludeWorkflowContext": "Include the task state (current phase, owner, recent notes) as AI context.",
-  "config.aiIncludeGitContext": "Include the current branch and latest commits as AI context."
+  "config.aiIncludeGitContext": "Include the current branch and latest commits as AI context.",
+  "cmd.refreshAgentUsage": "Refresh Agent Usage",
+  "config.usageEnabled": "Show Claude Code and Codex usage limit indicators in the status bar.",
+  "config.usageClaudePath": "Path to Claude Code's .credentials.json (empty uses ~/.claude/.credentials.json).",
+  "config.usageCodexPath": "Path to the Codex sessions directory (empty uses ~/.codex/sessions)."
 }

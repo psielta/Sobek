@@ -33,6 +33,9 @@ interface ManagedTerminal {
 export class TerminalManager {
   private readonly managed = new Set<ManagedTerminal>();
 
+  /** Notified when an agent CLI is launched (feeds the usage indicators). */
+  onAgentLaunch?: () => void;
+
   constructor(
     private readonly store: PromptStore,
     context: vscode.ExtensionContext
@@ -90,6 +93,7 @@ export class TerminalManager {
     terminal.show();
 
     if (agent) {
+      this.onAgentLaunch?.();
       await delay(AGENT_COMMAND_DELAY_MS);
       terminal.sendText(AGENT_COMMANDS[agent], true);
 

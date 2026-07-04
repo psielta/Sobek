@@ -17,6 +17,7 @@ import { AssistantViewProvider } from "./ui/assistant-view";
 import { BoardPanel } from "./ui/board-panel";
 import { CHILD_PREVIEW_SCHEME, ChildPromptPreviewProvider } from "./ui/child-preview";
 import { registerRefineCommand } from "./ui/refine-command";
+import { UsageStatusBar } from "./ui/usage-status";
 import { registerGenerateChildCommands } from "./ui/generate-child";
 import { registerPromptCommands } from "./ui/prompt-commands";
 import { PromptTreeProvider } from "./ui/tree";
@@ -105,6 +106,11 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
 
   const ai = new AiService(context, workspaceRoot, store);
   registerRefineCommand(context, store, ai);
+
+  if (vscode.workspace.getConfiguration("sobek.usage").get<boolean>("enabled", true)) {
+    const usage = new UsageStatusBar(context);
+    terminals.onAgentLaunch = () => usage.recordActivity();
+  }
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       AssistantViewProvider.viewType,

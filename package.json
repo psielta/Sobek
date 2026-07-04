@@ -223,6 +223,12 @@
         "command": "sobek.setGeminiApiKey",
         "title": "%cmd.setGeminiApiKey%",
         "category": "Sobek"
+      },
+      {
+        "command": "sobek.refreshAgentUsage",
+        "title": "%cmd.refreshAgentUsage%",
+        "category": "Sobek",
+        "icon": "$(pulse)"
       }
     ],
     "menus": {
@@ -448,6 +454,21 @@
           "type": "boolean",
           "default": false,
           "description": "%config.aiIncludeGitContext%"
+        },
+        "sobek.usage.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.usageEnabled%"
+        },
+        "sobek.usage.claudeCredentialsPath": {
+          "type": "string",
+          "default": "",
+          "description": "%config.usageClaudePath%"
+        },
+        "sobek.usage.codexSessionsPath": {
+          "type": "string",
+          "default": "",
+          "description": "%config.usageCodexPath%"
         }
       }
     }

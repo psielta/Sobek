@@ -106,5 +106,20 @@
   "No workflow": "Sem fluxo",
   "Done": "Concluídas",
   "Phase \"{0}\" does not exist in this task.": "A fase \"{0}\" não existe nesta tarefa.",
-  "AI unavailable: set the Gemini key with the \"Sobek: Set Gemini API Key\" command.": "IA indisponível: configure a chave Gemini com o comando \"Sobek: Configurar chave Gemini\"."
+  "AI unavailable: set the Gemini key with the \"Sobek: Set Gemini API Key\" command.": "IA indisponível: configure a chave Gemini com o comando \"Sobek: Configurar chave Gemini\".",
+  "{0} usage limits": "Limites de uso — {0}",
+  "5-hour window": "Janela de 5 horas",
+  "7-day window": "Janela de 7 dias",
+  "7-day window (Opus)": "Janela de 7 dias (Opus)",
+  "resets {0}": "reseta {0}",
+  "Session tokens: {0}": "Tokens da sessão: {0}",
+  "Rate limits unavailable; total tokens: {0}": "Limites indisponíveis; total de tokens: {0}",
+  "Updated {0} — click to refresh": "Atualizado {0} — clique para atualizar",
+  "Reading {0} usage...": "Lendo uso do {0}...",
+  "Log in to Claude Code to see usage.": "Faça login no Claude Code para ver o uso.",
+  "Claude session expired — log in again.": "Sessão do Claude expirada — faça login novamente.",
+  "No usage API permission (403).": "Sem permissão na API de uso (403).",
+  "Rate limited — will retry later.": "Limite de requisições atingido — tentará novamente depois.",
+  "No Codex usage data found. Use the Codex CLI with a ChatGPT subscription.": "Nenhum dado de uso do Codex encontrado. Use o Codex CLI com uma assinatura ChatGPT.",
+  "Usage error: {0}": "Erro ao ler uso: {0}"
 }
