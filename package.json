@@ -161,6 +161,48 @@
         "command": "sobek.newWorkspaceTerminal",
         "title": "Novo terminal no workspace",
         "category": "Sobek"
+      },
+      {
+        "command": "sobek.openBoard",
+        "title": "Abrir board de tarefas",
+        "category": "Sobek",
+        "icon": "$(layout-panel-justify)"
+      },
+      {
+        "command": "sobek.startWorkflow",
+        "title": "Iniciar fluxo da tarefa",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.addWorkflowNote",
+        "title": "Adicionar nota na timeline",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.addReviewVerdict",
+        "title": "Adicionar veredito de revisão",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.changeWorkflowActor",
+        "title": "Trocar responsável da tarefa",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.completeWorkflow",
+        "title": "Concluir tarefa",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.reopenWorkflow",
+        "title": "Reabrir tarefa",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.showTimeline",
+        "title": "Ver timeline da tarefa",
+        "category": "Sobek",
+        "icon": "$(list-ordered)"
       }
     ],
     "menus": {
@@ -169,6 +211,11 @@
           "command": "sobek.createPrompt",
           "when": "view == sobekPrompts",
           "group": "navigation@1"
+        },
+        {
+          "command": "sobek.openBoard",
+          "when": "view == sobekPrompts",
+          "group": "navigation@2"
         },
         {
           "command": "sobek.refreshPrompts",
@@ -231,6 +278,36 @@
           "command": "sobek.runPromptInAgentTerminal",
           "when": "view == sobekPrompts",
           "group": "2_terminal@3"
+        },
+        {
+          "command": "sobek.showTimeline",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "2_workflow@1"
+        },
+        {
+          "command": "sobek.addWorkflowNote",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "2_workflow@2"
+        },
+        {
+          "command": "sobek.addReviewVerdict",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "2_workflow@3"
+        },
+        {
+          "command": "sobek.changeWorkflowActor",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "2_workflow@4"
+        },
+        {
+          "command": "sobek.completeWorkflow",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "2_workflow@5"
+        },
+        {
+          "command": "sobek.reopenWorkflow",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt",
+          "group": "2_workflow@6"
         },
         {
           "command": "sobek.archivePrompt",

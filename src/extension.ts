@@ -11,10 +11,12 @@ import {
   offerAgentTerminalForChild,
   registerTerminalCommands,
 } from "./terminals/terminal-commands";
+import { BoardPanel } from "./ui/board-panel";
 import { CHILD_PREVIEW_SCHEME, ChildPromptPreviewProvider } from "./ui/child-preview";
 import { registerGenerateChildCommands } from "./ui/generate-child";
 import { registerPromptCommands } from "./ui/prompt-commands";
 import { PromptTreeProvider } from "./ui/tree";
+import { registerWorkflowCommands } from "./ui/workflow-commands";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   // Sobek targets the open VS Code workspace: no directory registration step.
@@ -47,6 +49,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     offerAgentTerminalForChild(terminals, child)
   );
   registerTerminalCommands(context, store, terminals);
+  registerWorkflowCommands(context, store);
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("sobek.openBoard", () => {
+      BoardPanel.show(context, store);
+    })
+  );
 
   const markdownSelector: vscode.DocumentSelector = { language: "markdown", scheme: "file" };
   context.subscriptions.push(
