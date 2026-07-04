@@ -108,14 +108,30 @@ describe("delete", () => {
 });
 
 describe("linked plan", () => {
-  it("stores plan pointers and PR references", async () => {
+  it("stores plan pointers (relative or absolute) and PR references", async () => {
     const prompt = await store.create({ title: "T", content: "" });
-    await store.setLinkedPlan(prompt.id, { relativePath: "docs/plan.md", displayName: "plan.md" });
+    await store.setLinkedPlan(prompt.id, { path: "docs/plan.md", displayName: "plan.md" });
     await store.setPullRequestReference(prompt.id, "#42");
     expect(store.require(prompt.id).linkedPlan).toEqual({
-      relativePath: "docs/plan.md",
+      path: "docs/plan.md",
       displayName: "plan.md",
       pullRequestReference: "#42",
     });
+    await store.setLinkedPlan(prompt.id, {
+      path: "C:\\planos\\fora-do-workspace.md",
+      displayName: "fora-do-workspace.md",
+    });
+    expect(store.require(prompt.id).linkedPlan?.path).toBe("C:\\planos\\fora-do-workspace.md");
+  });
+
+  it("migrates the legacy relativePath field on load", async () => {
+    const prompt = await store.create({ title: "T", content: "" });
+    const metaPath = path.join(root, ".sobek", "prompts", prompt.id, "meta.json");
+    const meta = JSON.parse(await fs.readFile(metaPath, "utf8"));
+    meta.linkedPlan = { relativePath: "docs/legado.md", displayName: "legado.md" };
+    await fs.writeFile(metaPath, JSON.stringify(meta), "utf8");
+    const fresh = new PromptStore(root);
+    await fresh.load();
+    expect(fresh.require(prompt.id).linkedPlan?.path).toBe("docs/legado.md");
   });
 });

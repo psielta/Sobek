@@ -123,6 +123,11 @@ export class PromptStore {
       if (!meta) {
         continue;
       }
+      // Early betas stored the plan pointer as `relativePath`.
+      const legacyPlan = meta.linkedPlan as (LinkedPlan & { relativePath?: string }) | undefined;
+      if (legacyPlan && !legacyPlan.path && legacyPlan.relativePath) {
+        meta.linkedPlan = { ...legacyPlan, path: legacyPlan.relativePath };
+      }
       const content = (await readTextFile(this.promptMarkdownPath(id))) ?? "";
       this.prompts.set(id, { ...meta, content });
     }

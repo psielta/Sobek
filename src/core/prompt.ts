@@ -52,8 +52,8 @@ export interface PromptVersion {
  * pointer and PR reference, without background watchers.
  */
 export interface LinkedPlan {
-  /** Path relative to the workspace root. */
-  relativePath: string;
+  /** Workspace-relative or absolute path — plans may live outside the repo. */
+  path: string;
   displayName: string;
   pullRequestReference?: string;
 }
