@@ -52,7 +52,7 @@ interface MentionState {
 /** Finds an "@query" token ending at the cursor, like the editor provider. */
 function findMentionToken(value: string, cursor: number): { start: number; query: string } | undefined {
   const prefix = value.slice(0, cursor);
-  const match = /(^|[\s([{])@([\w./\\-]*)$/.exec(prefix);
+  const match = /(^|[\s([{])@([\w./\\()-]*)$/.exec(prefix);
   if (!match) {
     return undefined;
   }

@@ -17,6 +17,21 @@ describe("parseMentions", () => {
     expect(mentions.map((mention) => mention.raw)).toEqual(["src/app.ts"]);
   });
 
+  it("supports Next.js route-group parentheses in paths", () => {
+    const text = "veja @app/(protected)/movimento/page.tsx";
+    expect(parseMentions(text).map((mention) => mention.raw)).toEqual([
+      "app/(protected)/movimento/page.tsx",
+    ]);
+  });
+
+  it("strips the closing paren of a wrapped mention but keeps balanced ones", () => {
+    const text = "(veja @docs/plan.md) e (@app/(admin)/x.ts)";
+    expect(parseMentions(text).map((mention) => mention.raw)).toEqual([
+      "docs/plan.md",
+      "app/(admin)/x.ts",
+    ]);
+  });
+
   it("reports the exact source range", () => {
     const text = "veja @a.md";
     const [mention] = parseMentions(text);

@@ -10,6 +10,15 @@ function isPromptDocument(store: PromptStore, document: vscode.TextDocument): bo
   );
 }
 
+/**
+ * Below this many indexed files the provider hands VS Code the FULL list once
+ * per session (isIncomplete=false): the native suggest filter then handles
+ * typing AND deleting. VS Code only re-queries isIncomplete providers on
+ * typing, never on backspace, so a server-side-limited list strands stale
+ * results when characters are deleted.
+ */
+const MAX_EAGER_ITEMS = 15_000;
+
 /** `@` completion listing workspace files, like Thoth's TipTap mention picker. */
 export class MentionCompletionProvider implements vscode.CompletionItemProvider {
   constructor(
@@ -25,27 +34,33 @@ export class MentionCompletionProvider implements vscode.CompletionItemProvider 
       return undefined;
     }
     const linePrefix = document.lineAt(position.line).text.slice(0, position.character);
-    const match = /(^|[\s([{])@([\w./\\-]*)$/.exec(linePrefix);
+    const match = /(^|[\s([{])@([\w./\\()-]*)$/.exec(linePrefix);
     if (!match) {
       return undefined;
     }
     const query = match[2] ?? "";
-    const relatives = await this.index.search(query, 100);
     const replaceStart = position.character - query.length;
     const range = new vscode.Range(position.line, replaceStart, position.line, position.character);
-    const items = relatives.map((relative, order) => {
+
+    const buildItem = (relative: string, order: number): vscode.CompletionItem => {
       const item = new vscode.CompletionItem(relative, vscode.CompletionItemKind.File);
       item.insertText = relative;
       // Filter on the whole relative path so typing "src/ma" keeps matching.
       item.filterText = relative;
-      item.sortText = String(order).padStart(4, "0");
+      item.sortText = String(order).padStart(5, "0");
       item.range = range;
       item.detail = "Menção de arquivo do workspace";
       return item;
-    });
-    // isIncomplete makes VS Code re-query on every keystroke (including
-    // deletions) instead of filtering a stale list — the Copilot approach.
-    return new vscode.CompletionList(items, true);
+    };
+
+    const all = await this.index.all();
+    if (all.length <= MAX_EAGER_ITEMS) {
+      return new vscode.CompletionList(all.map(buildItem), false);
+    }
+
+    // Huge workspaces: fall back to server-side ranking with re-query on type.
+    const ranked = await this.index.search(query, 1000);
+    return new vscode.CompletionList(ranked.map(buildItem), true);
   }
 }
 

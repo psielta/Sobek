@@ -27,6 +27,7 @@ const FIND_EXCLUDE = `{${[...IGNORED_DIRECTORIES].map((dir) => `**/${dir}/**`).j
 export class WorkspaceFileIndex {
   private files = new Set<string>();
   private loading: Promise<void> | undefined;
+  private sortedCache: string[] | undefined;
 
   constructor(private readonly workspaceRoot: string) {}
 
@@ -58,6 +59,7 @@ export class WorkspaceFileIndex {
     const relative = this.toRelative(uri);
     if (relative) {
       this.files.add(relative);
+      this.sortedCache = undefined;
     }
   }
 
@@ -74,6 +76,7 @@ export class WorkspaceFileIndex {
         this.files.delete(file);
       }
     }
+    this.sortedCache = undefined;
   }
 
   private ensureLoaded(): Promise<void> {
@@ -93,10 +96,20 @@ export class WorkspaceFileIndex {
   refresh(): void {
     this.files.clear();
     this.loading = undefined;
+    this.sortedCache = undefined;
   }
 
   async search(query: string, limit: number): Promise<string[]> {
     await this.ensureLoaded();
     return rankPaths(query, [...this.files], limit);
+  }
+
+  /** Every indexed path, shallow-first then alphabetical (cached). */
+  async all(): Promise<string[]> {
+    await this.ensureLoaded();
+    if (!this.sortedCache) {
+      this.sortedCache = rankPaths("", [...this.files], this.files.size);
+    }
+    return this.sortedCache;
   }
 }

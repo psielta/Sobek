@@ -18,9 +18,10 @@ export interface Mention {
 
 /**
  * Matches `@path` tokens: an `@` preceded by start-of-text or whitespace and
- * followed by a path-like run. Trailing punctuation is not part of the path.
+ * followed by a path-like run. Parentheses are path characters (Next.js route
+ * groups like `(protected)/movimento`); trailing punctuation is stripped.
  */
-const MENTION_PATTERN = /(^|[\s([{])@([\w./\\-]+)/g;
+const MENTION_PATTERN = /(^|[\s([{])@([\w./\\()-]+)/g;
 
 export function parseMentions(text: string): Mention[] {
   const mentions: Mention[] = [];
@@ -29,6 +30,11 @@ export function parseMentions(text: string): Mention[] {
     let raw = match[2] ?? "";
     // Strip trailing dots so sentence punctuation is not treated as path.
     raw = raw.replace(/\.+$/, "");
+    // Strip unbalanced closing parens: "(@docs/plan.md)" wraps the mention,
+    // while "(protected)/x" keeps its balanced route-group parens.
+    while (raw.endsWith(")") && !isBalanced(raw)) {
+      raw = raw.slice(0, -1);
+    }
     if (raw.length === 0) {
       continue;
     }
@@ -36,6 +42,21 @@ export function parseMentions(text: string): Mention[] {
     mentions.push({ raw, start, end: start + raw.length + 1 });
   }
   return mentions;
+}
+
+function isBalanced(candidate: string): boolean {
+  let open = 0;
+  for (const char of candidate) {
+    if (char === "(") {
+      open++;
+    } else if (char === ")") {
+      if (open === 0) {
+        return false;
+      }
+      open--;
+    }
+  }
+  return open === 0;
 }
 
 export type MentionIssueReason = "outside-workspace" | "not-found" | "not-a-file";
