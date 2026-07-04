@@ -29,6 +29,8 @@ const webviewCtx = await esbuild.context({
   outdir: "dist/webview",
   sourcemap: !production,
   minify: production,
+  // Codicon font referenced by @vscode/codicons CSS.
+  loader: { ".ttf": "file" },
 });
 
 if (watch) {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import "@vscode/codicons/dist/codicon.css";
 import "./assistant.css";
 
 interface ChatTurn {
@@ -20,6 +21,12 @@ interface AiSettings {
   thinkingLevel: string | null;
 }
 
+interface ActivePrompt {
+  id: string;
+  title: string;
+  isChild: boolean;
+}
+
 interface VsCodeApi {
   postMessage(message: unknown): void;
   getState(): unknown;
@@ -31,6 +38,7 @@ const host = window as unknown as {
     history: ChatTurn[];
     models: ModelInfo[];
     settings: AiSettings;
+    activePrompt: ActivePrompt | null;
   } | null;
   acquireVsCodeApi(): VsCodeApi;
 };
@@ -66,6 +74,9 @@ function App() {
   const [settings, setSettings] = useState<AiSettings | undefined>(initial?.settings);
   const [input, setInput] = useState("");
   const [includeContext, setIncludeContext] = useState(false);
+  const [activePrompt, setActivePrompt] = useState<ActivePrompt | null>(
+    initial?.activePrompt ?? null
+  );
   const [live, setLive] = useState<LiveMessage | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
@@ -86,8 +97,13 @@ function App() {
         settings?: AiSettings;
         files?: string[];
         requestId?: number;
+        prompt?: ActivePrompt | null;
+        activePrompt?: ActivePrompt | null;
       };
       switch (message.type) {
+        case "activePrompt":
+          setActivePrompt(message.prompt ?? null);
+          break;
         case "fileResults":
           if (message.requestId === searchSeq.current) {
             setMention((current) =>
@@ -100,6 +116,7 @@ function App() {
         case "init":
           setHistory(message.history ?? []);
           setSettings(message.settings);
+          setActivePrompt(message.activePrompt ?? null);
           break;
         case "userMessage":
           setHistory((current) => [...current, { role: "user", text: message.text ?? "" }]);
@@ -153,6 +170,20 @@ function App() {
     vscode.postMessage({ type: "send", text: input, includePromptContext: includeContext });
     setInput("");
     setMention(undefined);
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+    }
+  };
+
+  /** Grows the composer with the content, capped at ~6 lines. */
+  const autoGrow = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 132)}px`;
   };
 
   const updateMention = (value: string, cursor: number) => {
@@ -222,7 +253,8 @@ function App() {
         return;
       }
     }
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+    // Enter submits; Shift+Enter inserts a newline (standard AI chat UX).
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       send();
     }
@@ -232,16 +264,16 @@ function App() {
     <div className="chat">
       <header className="chat-header">
         <span className="chat-model" title="Modelo em uso">
-          {settings?.model ?? "gemini"}
+          <i className="codicon codicon-sparkle" /> {settings?.model ?? "gemini"}
         </span>
         <button onClick={() => vscode.postMessage({ type: "configure" })} title="Configurações de IA">
-          ⚙
+          <i className="codicon codicon-settings-gear" />
         </button>
         <button onClick={() => vscode.postMessage({ type: "setApiKey" })} title="Chave Gemini">
-          🔑
+          <i className="codicon codicon-key" />
         </button>
         <button onClick={() => vscode.postMessage({ type: "clear" })} title="Limpar conversa">
-          ✕
+          <i className="codicon codicon-clear-all" />
         </button>
       </header>
 
@@ -286,13 +318,33 @@ function App() {
       </div>
 
       <footer className="chat-input">
-        <label className="chat-context">
+        <label className={`chat-context${!activePrompt ? " chat-context-disabled" : ""}`}>
           <input
             type="checkbox"
-            checked={includeContext}
+            checked={includeContext && !!activePrompt}
+            disabled={!activePrompt}
             onChange={(event) => setIncludeContext(event.target.checked)}
           />
-          Incluir prompt atual como contexto
+          Usar como contexto:
+          {activePrompt ? (
+            <span
+              className={`context-chip${includeContext ? " context-chip-on" : ""}`}
+              title={
+                activePrompt.isChild
+                  ? "Prompt filho aberto no editor"
+                  : "Prompt aberto no editor"
+              }
+            >
+              <i
+                className={`codicon ${activePrompt.isChild ? "codicon-git-branch" : "codicon-note"}`}
+              />
+              {activePrompt.title}
+            </span>
+          ) : (
+            <span className="context-chip context-chip-empty">
+              nenhum prompt aberto no editor
+            </span>
+          )}
         </label>
         <div className="chat-input-row">
           {mention && mention.items.length > 0 && (
@@ -311,25 +363,39 @@ function App() {
               ))}
             </ul>
           )}
-          <textarea
-            ref={textareaRef}
-            value={input}
-            rows={3}
-            placeholder="Pergunte ao assistente... @ menciona arquivos (Ctrl+Enter envia)"
-            onChange={(event) => {
-              setInput(event.target.value);
-              updateMention(event.target.value, event.target.selectionStart ?? 0);
-            }}
-            onKeyDown={onInputKeyDown}
-            onBlur={() => window.setTimeout(() => setMention(undefined), 150)}
-          />
-          {busy ? (
-            <button onClick={() => vscode.postMessage({ type: "stop" })}>Parar</button>
-          ) : (
-            <button onClick={send} disabled={!input.trim()}>
-              Enviar
-            </button>
-          )}
+          <div className="composer">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              rows={1}
+              placeholder="Pergunte ao assistente... (@ menciona arquivos, Shift+Enter quebra linha)"
+              onChange={(event) => {
+                setInput(event.target.value);
+                updateMention(event.target.value, event.target.selectionStart ?? 0);
+                autoGrow();
+              }}
+              onKeyDown={onInputKeyDown}
+              onBlur={() => window.setTimeout(() => setMention(undefined), 150)}
+            />
+            {busy ? (
+              <button
+                className="composer-action stop"
+                title="Parar geração"
+                onClick={() => vscode.postMessage({ type: "stop" })}
+              >
+                <i className="codicon codicon-debug-stop" />
+              </button>
+            ) : (
+              <button
+                className="composer-action"
+                title="Enviar (Enter)"
+                onClick={send}
+                disabled={!input.trim()}
+              >
+                <i className="codicon codicon-send" />
+              </button>
+            )}
+          </div>
         </div>
       </footer>
     </div>

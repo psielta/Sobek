@@ -459,6 +459,7 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@types/vscode": "^1.96.0",
+    "@vscode/codicons": "^0.0.45",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "^0.24.2",
     "eslint": "^9.18.0",

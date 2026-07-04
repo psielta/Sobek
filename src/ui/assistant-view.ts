@@ -4,6 +4,7 @@ import type { AiService, ChatTurn } from "../ai/service";
 import type { WorkspaceFileIndex } from "../language/file-index";
 import type { PromptStore } from "../store/prompt-store";
 import { buildWebviewHtml } from "../lib/webview-html";
+import { CHILD_PREVIEW_SCHEME } from "./child-preview";
 
 /**
  * Sidebar chat specialized in prompt engineering — Sobek's counterpart of
@@ -15,13 +16,58 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private history: ChatTurn[] = [];
   private streaming: AbortController | undefined;
+  private activePromptId: string | undefined;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly store: PromptStore,
     private readonly ai: AiService,
     private readonly fileIndex: WorkspaceFileIndex
-  ) {}
+  ) {
+    // Track which prompt is the chat context. Focusing the webview clears
+    // activeTextEditor, so the last resolved prompt is kept sticky until the
+    // user opens a different file.
+    context.subscriptions.push(
+      vscode.window.onDidChangeActiveTextEditor((editor) => {
+        this.updateActivePrompt(editor);
+        this.postActivePrompt();
+      })
+    );
+    store.onDidChange(() => this.postActivePrompt());
+    this.updateActivePrompt(vscode.window.activeTextEditor);
+  }
+
+  private updateActivePrompt(editor: vscode.TextEditor | undefined): void {
+    if (!editor) {
+      return; // webview/panel got focus — keep the last prompt
+    }
+    const uri = editor.document.uri;
+    if (uri.scheme === "file") {
+      this.activePromptId = this.store.findByMarkdownPath(uri.fsPath)?.id;
+      return;
+    }
+    if (uri.scheme === CHILD_PREVIEW_SCHEME) {
+      const id = uri.path.replace(/^\//, "").split("/")[0];
+      this.activePromptId = this.store.get(id)?.id;
+    }
+    // Other schemes (diffs, output, previews) do not change the context.
+  }
+
+  private activePromptSummary(): { id: string; title: string; isChild: boolean } | null {
+    const prompt = this.activePromptId ? this.store.get(this.activePromptId) : undefined;
+    if (!prompt) {
+      return null;
+    }
+    return {
+      id: prompt.id,
+      title: prompt.title || "(sem título)",
+      isChild: !!prompt.parentPromptId,
+    };
+  }
+
+  private postActivePrompt(): void {
+    this.post({ type: "activePrompt", prompt: this.activePromptSummary() });
+  }
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
@@ -35,6 +81,7 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
         history: this.history,
         models: this.ai.listModels(),
         settings: this.ai.getSettings(),
+        activePrompt: this.activePromptSummary(),
       },
     });
     view.webview.onDidReceiveMessage((message) => void this.handleMessage(message));
@@ -44,13 +91,6 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
     void this.view?.webview.postMessage(message);
   }
 
-  private activePrompt() {
-    const active = vscode.window.activeTextEditor;
-    if (!active) {
-      return undefined;
-    }
-    return this.store.findByMarkdownPath(active.document.uri.fsPath);
-  }
 
   private async handleMessage(message: {
     type: string;
@@ -71,6 +111,7 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
           history: this.history,
           models: this.ai.listModels(),
           settings: this.ai.getSettings(),
+          activePrompt: this.activePromptSummary(),
         });
         break;
       case "send":
@@ -101,7 +142,10 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
     if (!trimmed || this.streaming) {
       return;
     }
-    const prompt = includePromptContext ? this.activePrompt() : undefined;
+    const prompt =
+      includePromptContext && this.activePromptId
+        ? this.store.get(this.activePromptId)
+        : undefined;
     if (includePromptContext && !prompt) {
       this.post({
         type: "error",

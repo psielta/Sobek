@@ -37,15 +37,21 @@ body {
 .chat-header button {
   background: none;
   border: none;
-  color: var(--vscode-foreground);
+  color: var(--vscode-icon-foreground, var(--vscode-foreground));
   cursor: pointer;
-  font-size: 13px;
-  padding: 2px 4px;
+  padding: 3px;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
 }
 
 .chat-header button:hover {
   background: var(--vscode-toolbar-hoverBackground);
+}
+
+.chat-model .codicon {
+  font-size: 12px;
+  vertical-align: text-bottom;
 }
 
 .chat-messages {
@@ -234,13 +240,114 @@ details summary {
   align-items: center;
   gap: 6px;
   opacity: 0.9;
+  min-width: 0;
+}
+
+.chat-context-disabled {
+  opacity: 0.55;
+}
+
+.context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-chip .codicon {
+  font-size: 11px;
+  flex: none;
+}
+
+.context-chip-on {
+  border-color: var(--vscode-focusBorder);
+}
+
+.context-chip-empty {
+  background: transparent;
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+  font-style: italic;
 }
 
 .chat-input-row {
-  display: flex;
-  gap: 6px;
-  align-items: flex-end;
   position: relative;
+}
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 6px 6px 6px 10px;
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 10px;
+  transition: border-color 0.1s ease-in-out;
+}
+
+.composer:focus-within {
+  border-color: var(--vscode-focusBorder);
+}
+
+.composer textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--vscode-input-foreground);
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 3px 0;
+  min-height: 18px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.composer textarea::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+  opacity: 0.8;
+}
+
+.composer-action {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.composer-action .codicon {
+  font-size: 14px;
+}
+
+.composer-action:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.composer-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.composer-action.stop {
+  background: var(--vscode-inputValidation-errorBackground, #5a1d1d);
+  color: var(--vscode-foreground);
 }
 
 .mention-dropdown {
