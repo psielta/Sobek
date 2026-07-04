@@ -2,10 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   buildChatSystemInstruction,
   buildChatUserMessage,
+  buildCustomInstructionsBlock,
+  buildGitContextBlock,
+  buildLinkedPlanBlock,
+  buildMentionedFilesBlock,
+  buildParentPromptBlock,
   buildRefineSystemInstruction,
+  buildSelectedFilesBlock,
+  buildWorkflowStateBlock,
   buildWorkspaceContextBlock,
   CHAT_SYSTEM_INSTRUCTION,
   REFINE_SYSTEM_INSTRUCTION,
+  WORKSPACE_CONTEXT_FILES,
 } from "./instructions";
 import { DEFAULT_AI_SETTINGS, deriveThinkingMode } from "./models";
 
@@ -45,6 +53,65 @@ describe("chat user message", () => {
     expect(buildChatUserMessage("olá", "# Prompt")).toBe(
       "olá\n\n---\n**Conteúdo do prompt atual:**\n# Prompt"
     );
+  });
+});
+
+describe("context blocks", () => {
+  it("extends the workspace context file list with agent conventions", () => {
+    expect(WORKSPACE_CONTEXT_FILES).toEqual([
+      "README.md",
+      "CLAUDE.md",
+      "AGENT.md",
+      "AGENTS.md",
+      "GEMINI.md",
+      ".github/copilot-instructions.md",
+    ]);
+  });
+
+  it("renders selected files with Thoth's header", () => {
+    const block = buildSelectedFilesBlock([{ name: "src/a.ts", content: "code" }]);
+    expect(block).toContain("## Arquivos de contexto selecionados");
+    expect(block).toContain("### src/a.ts\n\ncode");
+    expect(buildSelectedFilesBlock([])).toBeUndefined();
+  });
+
+  it("renders custom instructions with Thoth's preamble", () => {
+    expect(buildCustomInstructionsBlock("seja curto")).toBe(
+      "## Instruções adicionais do usuário\n\nAo refinar, siga estas instruções:\nseja curto"
+    );
+    expect(buildCustomInstructionsBlock("   ")).toBeUndefined();
+  });
+
+  it("renders mentioned files, linked plan and parent prompt blocks", () => {
+    expect(buildMentionedFilesBlock([{ name: "src/x.ts", content: "y" }])).toContain(
+      "## Arquivos mencionados no prompt"
+    );
+    expect(buildLinkedPlanBlock("plano.md", "# Plano")).toBe(
+      "## Plano vinculado (plano.md)\n\n# Plano"
+    );
+    expect(buildLinkedPlanBlock("plano.md", "  ")).toBeUndefined();
+    expect(buildParentPromptBlock("# Pai")).toContain("## Prompt pai");
+  });
+
+  it("renders workflow state with notes and iteration", () => {
+    const block = buildWorkflowStateBlock({
+      phaseName: "Implementação",
+      actorLabel: "Codex",
+      status: "Active",
+      iteration: 2,
+      recentNotes: ["nota 1"],
+    });
+    expect(block).toContain("- Fase atual: Implementação");
+    expect(block).toContain("- Responsável atual: Codex");
+    expect(block).toContain("- Iteração da fase: 2");
+    expect(block).toContain("  - nota 1");
+  });
+
+  it("renders git context with branch and commits", () => {
+    const block = buildGitContextBlock("main", ["abc123 feat: x"]);
+    expect(block).toContain("Branch atual: main");
+    expect(block).toContain("abc123 feat: x");
+    expect(buildGitContextBlock("", [])).toBeUndefined();
   });
 });
 

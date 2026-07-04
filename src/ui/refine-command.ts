@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as path from "node:path";
 import type { AiService } from "../ai/service";
 import type { PromptStore } from "../store/prompt-store";
 import type { PromptTreeItem } from "./tree";
@@ -57,6 +58,39 @@ export function registerRefineCommand(
         return;
       }
 
+      // Optional per-call context, like Thoth's refine dialog: selected files
+      // (Enter with nothing selected skips) and custom instructions.
+      const files = await vscode.workspace.findFiles(
+        "**/*",
+        "{**/node_modules/**,**/.sobek/**,**/.git/**,**/dist/**,**/build/**,**/bin/**,**/obj/**}",
+        300
+      );
+      const pickedFiles = await vscode.window.showQuickPick(
+        files
+          .map((uri) => {
+            const relative = path.relative(store.root, uri.fsPath).replace(/\\/g, "/");
+            return { label: path.basename(uri.fsPath), description: relative };
+          })
+          .sort((a, b) => a.description.localeCompare(b.description)),
+        {
+          canPickMany: true,
+          placeHolder:
+            "Arquivos de contexto para o refinamento (opcional — Enter sem seleção para pular)",
+          matchOnDescription: true,
+        }
+      );
+      if (pickedFiles === undefined) {
+        return;
+      }
+      const customInstructions = await vscode.window.showInputBox({
+        prompt: "Instruções adicionais para o refinamento (opcional — Enter para pular)",
+        placeHolder: "Ex.: mantenha o prompt curto e em formato de checklist",
+        ignoreFocusOut: true,
+      });
+      if (customInstructions === undefined) {
+        return;
+      }
+
       let refined: string;
       try {
         refined = await vscode.window.withProgress(
@@ -68,7 +102,13 @@ export function registerRefineCommand(
           async (_progress, token) => {
             const controller = new AbortController();
             token.onCancellationRequested(() => controller.abort());
-            return ai.refine(prompt.content, controller.signal);
+            return ai.refine({
+              content: prompt.content,
+              prompt,
+              contextFiles: pickedFiles.map((item) => item.description as string),
+              customInstructions: customInstructions.trim() || undefined,
+              signal: controller.signal,
+            });
           }
         );
       } catch (error) {

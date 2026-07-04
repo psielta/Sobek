@@ -42,12 +42,12 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
     void this.view?.webview.postMessage(message);
   }
 
-  private activePromptContent(): string | undefined {
+  private activePrompt() {
     const active = vscode.window.activeTextEditor;
     if (!active) {
       return undefined;
     }
-    return this.store.findByMarkdownPath(active.document.uri.fsPath)?.content;
+    return this.store.findByMarkdownPath(active.document.uri.fsPath);
   }
 
   private async handleMessage(message: {
@@ -92,8 +92,8 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
     if (!trimmed || this.streaming) {
       return;
     }
-    const promptContent = includePromptContext ? this.activePromptContent() : undefined;
-    if (includePromptContext && !promptContent) {
+    const prompt = includePromptContext ? this.activePrompt() : undefined;
+    if (includePromptContext && !prompt) {
       this.post({
         type: "error",
         message: "Nenhum prompt ativo: abra o prompt.md de um prompt do Sobek.",
@@ -107,19 +107,14 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
     this.streaming = new AbortController();
     let answer = "";
     try {
-      for await (const chunk of this.ai.chat(
-        history,
-        trimmed,
-        promptContent,
-        this.streaming.signal
-      )) {
+      for await (const chunk of this.ai.chat(history, trimmed, prompt, this.streaming.signal)) {
         if (!chunk.isThought) {
           answer += chunk.text;
         }
         this.post({ type: "chunk", text: chunk.text, isThought: chunk.isThought });
       }
       this.history.push(
-        { role: "user", text: buildChatUserMessage(trimmed, promptContent) },
+        { role: "user", text: buildChatUserMessage(trimmed, prompt?.content) },
         { role: "model", text: answer }
       );
       this.post({ type: "done" });

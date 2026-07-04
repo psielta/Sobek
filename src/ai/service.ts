@@ -1,8 +1,12 @@
 import * as vscode from "vscode";
+import type { Prompt } from "../core/prompt";
+import type { PromptStore } from "../store/prompt-store";
+import { buildPromptContext } from "./context-builder";
 import { GeminiClient, type GeminiMessage, type GeminiStreamChunk } from "./gemini-client";
 import {
   buildChatSystemInstruction,
   buildChatUserMessage,
+  buildCustomInstructionsBlock,
   buildRefineSystemInstruction,
 } from "./instructions";
 import {
@@ -21,11 +25,22 @@ export interface ChatTurn {
   text: string;
 }
 
+export interface RefineOptions {
+  content: string;
+  /** The Sobek prompt being refined, when known — enables derived context. */
+  prompt?: Prompt;
+  /** Workspace-relative paths chosen by the user for this refinement. */
+  contextFiles?: string[];
+  customInstructions?: string;
+  signal?: AbortSignal;
+}
+
 /** Extension-host Gemini service: settings, secrets and the two AI flows. */
 export class AiService {
   constructor(
     private readonly context: vscode.ExtensionContext,
-    private readonly workspaceRoot: string
+    private readonly workspaceRoot: string,
+    private readonly store: PromptStore
   ) {}
 
   async getApiKey(): Promise<string | undefined> {
@@ -92,19 +107,42 @@ export class AiService {
     return readWorkspaceContext(this.workspaceRoot);
   }
 
-  /** Prompt refinement: single-shot, no thoughts, refine temperature. */
-  async refine(content: string, signal?: AbortSignal): Promise<string> {
+  /**
+   * Prompt refinement: single-shot, no thoughts. System instruction follows
+   * Thoth's order — base, workspace context, selected files (plus Sobek's
+   * derived blocks: mentions, plan, parent, workflow, git), custom
+   * instructions — all joined by blank lines.
+   */
+  async refine(options: RefineOptions): Promise<string> {
     const client = await this.createClient();
     const settings = this.getSettings();
-    const context = await this.workspaceContext();
+    const parts: string[] = [];
+    const workspaceContext = await this.workspaceContext();
+    if (workspaceContext) {
+      parts.push(workspaceContext);
+    }
+    const promptContext = await buildPromptContext(this.store, options.prompt, {
+      contextFiles: options.contextFiles,
+    });
+    if (promptContext) {
+      parts.push(promptContext);
+    }
+    const custom = options.customInstructions
+      ? buildCustomInstructionsBlock(options.customInstructions)
+      : undefined;
+    if (custom) {
+      parts.push(custom);
+    }
     const result = await client.generate({
       model: settings.model,
-      systemInstruction: buildRefineSystemInstruction(context),
-      messages: [{ role: "user", text: content }],
+      systemInstruction: buildRefineSystemInstruction(
+        parts.length > 0 ? parts.join("\n\n") : undefined
+      ),
+      messages: [{ role: "user", text: options.content }],
       temperature: settings.temperature,
       thinking: this.thinkingFor(settings),
       includeThoughts: false,
-      signal,
+      signal: options.signal,
     });
     return result.text.trim();
   }
@@ -113,12 +151,21 @@ export class AiService {
   async *chat(
     history: ChatTurn[],
     message: string,
-    promptContent: string | undefined,
+    prompt: Prompt | undefined,
     signal?: AbortSignal
   ): AsyncGenerator<GeminiStreamChunk> {
     const client = await this.createClient();
     const settings = this.getSettings();
     const context = await this.workspaceContext();
+
+    // The prompt context travels in the user turn (like Thoth); Sobek also
+    // appends the derived blocks (plan, parent, workflow, git) to it.
+    let promptContent: string | undefined;
+    if (prompt) {
+      const derived = await buildPromptContext(this.store, prompt);
+      promptContent = derived ? `${prompt.content}\n\n${derived}` : prompt.content;
+    }
+
     const messages: GeminiMessage[] = [
       ...history.map((turn) => ({ role: turn.role, text: turn.text })),
       { role: "user" as const, text: buildChatUserMessage(message, promptContent) },

@@ -96,7 +96,7 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
     })
   );
 
-  const ai = new AiService(context, workspaceRoot);
+  const ai = new AiService(context, workspaceRoot, store);
   registerRefineCommand(context, store, ai);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(

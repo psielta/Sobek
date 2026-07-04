@@ -415,7 +415,32 @@
         "sobek.ai.useWorkspaceContext": {
           "type": "boolean",
           "default": false,
-          "description": "Injeta README.md, CLAUDE.md e AGENT.md da raiz do workspace nas instruções de sistema do Gemini."
+          "description": "Injeta README.md, CLAUDE.md, AGENT.md, AGENTS.md, GEMINI.md e .github/copilot-instructions.md da raiz do workspace nas instruções de sistema do Gemini."
+        },
+        "sobek.ai.includeMentionedFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Inclui automaticamente o conteúdo dos arquivos @mencionados no prompt como contexto da IA."
+        },
+        "sobek.ai.includeLinkedPlan": {
+          "type": "boolean",
+          "default": true,
+          "description": "Inclui o conteúdo do plano vinculado do prompt como contexto da IA."
+        },
+        "sobek.ai.includeParentPrompt": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ao trabalhar em um prompt filho, inclui o conteúdo do prompt pai como contexto da IA."
+        },
+        "sobek.ai.includeWorkflowContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Inclui o estado da tarefa (fase atual, responsável, últimas notas) como contexto da IA."
+        },
+        "sobek.ai.includeGitContext": {
+          "type": "boolean",
+          "default": false,
+          "description": "Inclui branch atual e últimos commits do repositório como contexto da IA."
         }
       }
     }

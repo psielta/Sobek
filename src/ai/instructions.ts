@@ -20,8 +20,18 @@ export const CHAT_SYSTEM_INSTRUCTION =
   "Para blocos de código, sempre especifique a linguagem. " +
   "Seja claro, direto e técnico.";
 
-/** Names read from the workspace root when AI context is enabled. */
-export const WORKSPACE_CONTEXT_FILES = ["README.md", "CLAUDE.md", "AGENT.md"] as const;
+/**
+ * Names read from the workspace root when AI context is enabled. Thoth reads
+ * the first three; Sobek extends the list with other agent-convention files.
+ */
+export const WORKSPACE_CONTEXT_FILES = [
+  "README.md",
+  "CLAUDE.md",
+  "AGENT.md",
+  "AGENTS.md",
+  "GEMINI.md",
+  ".github/copilot-instructions.md",
+] as const;
 
 export const MAX_CONTEXT_FILE_BYTES = 64 * 1024;
 export const MAX_TOTAL_CONTEXT_CHARS = 48_000;
@@ -58,4 +68,100 @@ export function buildChatUserMessage(message: string, promptContent?: string): s
     return message;
   }
   return `${message}\n\n---\n**Conteúdo do prompt atual:**\n${promptContent}`;
+}
+
+export interface NamedContent {
+  name: string;
+  content: string;
+}
+
+/** Thoth's "selected context files" block, verbatim format. */
+export function buildSelectedFilesBlock(files: NamedContent[]): string | undefined {
+  if (files.length === 0) {
+    return undefined;
+  }
+  const sections = files.map((file) => `### ${file.name}\n\n${file.content}`);
+  return ["## Arquivos de contexto selecionados", ...sections].join("\n\n");
+}
+
+/** Thoth's custom instructions block, verbatim format. */
+export function buildCustomInstructionsBlock(text: string): string | undefined {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return `## Instruções adicionais do usuário\n\nAo refinar, siga estas instruções:\n${trimmed}`;
+}
+
+/** Files the prompt already references via @mentions — Sobek-specific. */
+export function buildMentionedFilesBlock(files: NamedContent[]): string | undefined {
+  if (files.length === 0) {
+    return undefined;
+  }
+  const sections = files.map((file) => `### ${file.name}\n\n${file.content}`);
+  return [
+    "## Arquivos mencionados no prompt",
+    "O prompt referencia os arquivos abaixo com @menções; use-os como contexto.",
+    ...sections,
+  ].join("\n\n");
+}
+
+export function buildLinkedPlanBlock(displayName: string, content: string): string | undefined {
+  if (!content.trim()) {
+    return undefined;
+  }
+  return `## Plano vinculado (${displayName})\n\n${content}`;
+}
+
+export function buildParentPromptBlock(content: string): string | undefined {
+  if (!content.trim()) {
+    return undefined;
+  }
+  return `## Prompt pai\n\nEste prompt é um prompt filho; o prompt pai da tarefa é:\n\n${content}`;
+}
+
+export interface WorkflowStateContext {
+  phaseName?: string;
+  actorLabel?: string;
+  status: string;
+  iteration: number;
+  recentNotes: string[];
+}
+
+export function buildWorkflowStateBlock(state: WorkflowStateContext): string {
+  const lines = [
+    "## Estado da tarefa",
+    "",
+    `- Status do fluxo: ${state.status === "Done" ? "Concluída" : "Em andamento"}`,
+  ];
+  if (state.phaseName) {
+    lines.push(`- Fase atual: ${state.phaseName}`);
+  }
+  if (state.actorLabel) {
+    lines.push(`- Responsável atual: ${state.actorLabel}`);
+  }
+  if (state.iteration > 1) {
+    lines.push(`- Iteração da fase: ${state.iteration}`);
+  }
+  if (state.recentNotes.length > 0) {
+    lines.push("- Últimas notas da timeline:");
+    for (const note of state.recentNotes) {
+      lines.push(`  - ${note}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+export function buildGitContextBlock(branch: string, commits: string[]): string | undefined {
+  if (!branch && commits.length === 0) {
+    return undefined;
+  }
+  const lines = ["## Contexto git", ""];
+  if (branch) {
+    lines.push(`Branch atual: ${branch}`);
+  }
+  if (commits.length > 0) {
+    lines.push("", "Últimos commits:", "```", ...commits, "```");
+  }
+  return lines.join("\n");
 }
