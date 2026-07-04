@@ -79,7 +79,10 @@ export class TerminalManager {
   async create(options: {
     prompt?: Prompt;
     agent?: AgentKind;
+    /** Submit the flattened prompt to the CLI (Enter included). */
     submitPrompt?: boolean;
+    /** Stage the flattened prompt as an unsent draft (no Enter). */
+    stagePrompt?: boolean;
     claudeEffort?: ClaudeEffort;
   }): Promise<vscode.Terminal | undefined> {
     const { prompt, agent } = options;
@@ -122,9 +125,9 @@ export class TerminalManager {
         await delay(CLAUDE_PLAN_FOLLOW_UP_DELAY_MS);
         await this.writeStaged(terminal, content, false);
         await this.tryEnterPlanMode(prompt);
-      } else if (options.submitPrompt && content) {
+      } else if ((options.submitPrompt || options.stagePrompt) && content) {
         await delay(CLAUDE_PLAN_FOLLOW_UP_DELAY_MS);
-        await this.writeStaged(terminal, content, true);
+        await this.writeStaged(terminal, content, options.submitPrompt === true);
       }
     }
 

@@ -66,6 +66,43 @@ export function agentForTarget(target: TargetAgent): AgentKind {
   }
 }
 
+type LaunchMode = "run" | "stage" | "plan" | "open";
+
+/**
+ * "Como vai ser a execução": submit now, stage as an unsent draft, Claude
+ * plan mode, or just open the agent with nothing typed.
+ */
+async function pickLaunchMode(agent: AgentKind): Promise<LaunchMode | undefined> {
+  const items: Array<{ label: string; description?: string; mode: LaunchMode }> = [
+    {
+      label: `$(play) ${vscode.l10n.t("Run now")}`,
+      description: vscode.l10n.t("Submits the prompt to the agent immediately"),
+      mode: "run",
+    },
+    {
+      label: `$(edit) ${vscode.l10n.t("Stage as draft")}`,
+      description: vscode.l10n.t("Types the prompt without Enter — review and send yourself"),
+      mode: "stage",
+    },
+  ];
+  if (agent === "Claude") {
+    items.push({
+      label: `$(checklist) ${vscode.l10n.t("Plan mode")}`,
+      description: vscode.l10n.t("Stages the prompt as a planning draft and marks the task"),
+      mode: "plan",
+    });
+  }
+  items.push({
+    label: `$(terminal) ${vscode.l10n.t("Just open the agent")}`,
+    description: vscode.l10n.t("Launches the CLI with nothing typed"),
+    mode: "open",
+  });
+  const picked = await vscode.window.showQuickPick(items, {
+    placeHolder: vscode.l10n.t("How should the prompt run?"),
+  });
+  return picked?.mode;
+}
+
 function agentPicks(): Array<{ label: string; description: string; agent: AgentKind }> {
   return [
     {
@@ -151,14 +188,20 @@ export function registerTerminalCommands(
       if (!picked) {
         return;
       }
-      const effort = await resolveClaudeEffort(picked.agent);
+      const mode = await pickLaunchMode(picked.agent);
+      if (!mode) {
+        return;
+      }
+      const agent: AgentKind = mode === "plan" ? "ClaudePlan" : picked.agent;
+      const effort = await resolveClaudeEffort(agent);
       if (!effort) {
         return;
       }
       await manager.create({
         prompt,
-        agent: picked.agent,
-        submitPrompt: true,
+        agent,
+        submitPrompt: mode === "run",
+        stagePrompt: mode === "stage",
         claudeEffort: effort.effort,
       });
     }),
@@ -216,6 +259,7 @@ export async function offerAgentTerminalForChild(
   }
 
   let agent: AgentKind = defaultAgent;
+  let mode: LaunchMode = "run";
   if (answer === chooseLabel) {
     const picked = await vscode.window.showQuickPick(
       agentPicks()
@@ -230,11 +274,23 @@ export async function offerAgentTerminalForChild(
       return;
     }
     agent = picked.agent;
+    const pickedMode = await pickLaunchMode(agent);
+    if (!pickedMode) {
+      return;
+    }
+    mode = pickedMode;
   }
 
-  const effort = await resolveClaudeEffort(agent);
+  const resolvedAgent: AgentKind = mode === "plan" ? "ClaudePlan" : agent;
+  const effort = await resolveClaudeEffort(resolvedAgent);
   if (!effort) {
     return;
   }
-  await manager.create({ prompt: child, agent, submitPrompt: true, claudeEffort: effort.effort });
+  await manager.create({
+    prompt: child,
+    agent: resolvedAgent,
+    submitPrompt: mode === "run",
+    stagePrompt: mode === "stage",
+    claudeEffort: effort.effort,
+  });
 }
