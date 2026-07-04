@@ -26,6 +26,7 @@
     "agents"
   ],
   "main": "./dist/extension.js",
+  "icon": "media/icon.png",
   "l10n": "./l10n",
   "activationEvents": [
     "onStartupFinished"
@@ -579,6 +580,7 @@
     }
   },
   "scripts": {
+    "vscode:prepublish": "node esbuild.mjs --production",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",

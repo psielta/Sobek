@@ -60,6 +60,29 @@ Para qualquer mudança: `npm run build && npm run typecheck && npm run lint && n
 - Mudou UI/webview → valide manualmente via F5 (tree, board, chat) antes de concluir.
 - Mudou manifest (`package.json`) → confirme que `npm run package` continua gerando o `.vsix`.
 
+## Publicação (Marketplace + Open VSX)
+
+Tokens locais em `.env` na raiz do repo (**nunca commitado**; nunca imprima os valores):
+- `PERSONAL_ACCESS_TOKEN` — Azure DevOps PAT (scope Marketplace → Manage) do publisher `psielta`.
+- `OPEN_VSX_TOKEN` — token do Open VSX (o namespace precisa ser `psielta`, igual ao campo `publisher` do package.json; foi criado via `npx ovsx create-namespace psielta`).
+
+Fluxo preferido — release por tag (o workflow `.github/workflows/release.yml` publica nos dois marketplaces usando os secrets `VSCE_PAT` e `OVSX_TOKEN` do repositório GitHub):
+
+```powershell
+npm version patch          # ou minor/major — atualiza package.json e cria a tag vX.Y.Z
+git push --follow-tags
+```
+
+Fluxo manual (mesma versão do package.json; `vscode:prepublish` roda o build de produção automaticamente):
+
+```powershell
+$envs = Get-Content .env | ConvertFrom-StringData
+npx vsce publish -p $envs.PERSONAL_ACCESS_TOKEN
+npx ovsx publish -p $envs.OPEN_VSX_TOKEN
+```
+
+Antes de publicar: CI verde, versão bumpada (o Marketplace rejeita republicar a mesma versão) e `npm run package` gerando o `.vsix` sem erros. Páginas: `marketplace.visualstudio.com/items?itemName=psielta.sobek` e `open-vsx.org/extension/psielta/sobek`.
+
 ## Commits
 
 - Sempre Conventional Commits (`feat(escopo): ...`, `fix: ...`, `docs: ...`), **sem** linha `Co-Authored-By`.

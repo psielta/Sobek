@@ -37,6 +37,10 @@ npm run test
 
 Mudanças de UI: validar via F5 (Run Extension). Mudanças de manifest: `npm run package`.
 
+## Publicação
+
+Quando o usuário pedir para publicar a extensão: siga a seção "Publicação (Marketplace + Open VSX)" do `AGENT.md`. Resumo: bump de versão (`npm version patch|minor|major`) + `git push --follow-tags` dispara o workflow de release (secrets `VSCE_PAT`/`OVSX_TOKEN` já configurados no GitHub); manual, use os tokens de `.env` (`PERSONAL_ACCESS_TOKEN` para `vsce`, `OPEN_VSX_TOKEN` para `ovsx`) sem nunca imprimir os valores. Publisher/namespace: `psielta`.
+
 ## Commits
 
 - Conventional Commits, **sem** linha `Co-Authored-By`.
