@@ -22,10 +22,46 @@ import { PromptTreeProvider } from "./ui/tree";
 import { registerWorkflowCommands } from "./ui/workflow-commands";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  try {
+    await initialize(context);
+  } catch (error) {
+    void vscode.window.showErrorMessage(
+      `Sobek falhou ao ativar: ${(error as Error).message}`
+    );
+    throw error;
+  }
+}
+
+/**
+ * Without a folder open there is no target workspace; commands still need to
+ * exist (the view buttons are always visible), so they explain the state.
+ */
+function registerNoWorkspaceFallback(context: vscode.ExtensionContext): void {
+  const warn = () =>
+    void vscode.window.showWarningMessage(
+      "Abra uma pasta para usar o Sobek: o workspace aberto é o diretório alvo dos prompts."
+    );
+  const commands = [
+    "sobek.createPrompt",
+    "sobek.refreshPrompts",
+    "sobek.openPrompt",
+    "sobek.openBoard",
+    "sobek.generateChildPrompt",
+    "sobek.newWorkspaceTerminal",
+    "sobek.refinePrompt",
+    "sobek.setGeminiApiKey",
+  ];
+  for (const id of commands) {
+    context.subscriptions.push(vscode.commands.registerCommand(id, warn));
+  }
+}
+
+async function initialize(context: vscode.ExtensionContext): Promise<void> {
   // Sobek targets the open VS Code workspace: no directory registration step.
   const workspaceRoot = getWorkspaceRoot();
   await vscode.commands.executeCommand("setContext", "sobek.hasWorkspace", !!workspaceRoot);
   if (!workspaceRoot) {
+    registerNoWorkspaceFallback(context);
     return;
   }
 
