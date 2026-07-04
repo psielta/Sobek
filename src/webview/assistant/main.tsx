@@ -349,18 +349,25 @@ function App() {
         <div className="chat-input-row">
           {mention && mention.items.length > 0 && (
             <ul className="mention-dropdown">
-              {mention.items.map((file, index) => (
-                <li
-                  key={file}
-                  className={index === mention.active ? "active" : undefined}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    applyMention(file);
-                  }}
-                >
-                  {file}
-                </li>
-              ))}
+              {mention.items.map((file, index) => {
+                const slash = file.lastIndexOf("/");
+                const name = slash >= 0 ? file.slice(slash + 1) : file;
+                const dir = slash >= 0 ? file.slice(0, slash) : "";
+                return (
+                  <li
+                    key={file}
+                    className={index === mention.active ? "active" : undefined}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      applyMention(file);
+                    }}
+                  >
+                    <i className="codicon codicon-file" />
+                    <span className="mention-name">{name}</span>
+                    {dir && <span className="mention-dir">{dir}</span>}
+                  </li>
+                );
+              })}
             </ul>
           )}
           <div className="composer">

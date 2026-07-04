@@ -241,6 +241,48 @@ details summary {
   gap: 6px;
   opacity: 0.9;
   min-width: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* VS Code-styled checkbox (native look via --vscode-checkbox-* vars). */
+.chat-context input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--vscode-checkbox-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  background: var(--vscode-checkbox-background, var(--vscode-input-background));
+  cursor: pointer;
+}
+
+.chat-context input[type="checkbox"]:hover:not(:disabled) {
+  background: var(--vscode-checkbox-selectBackground, var(--vscode-input-background));
+  border-color: var(--vscode-checkbox-selectBorder, var(--vscode-focusBorder));
+}
+
+.chat-context input[type="checkbox"]:checked::before {
+  content: "\eab2"; /* codicon-check */
+  font-family: codicon;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--vscode-checkbox-foreground, var(--vscode-foreground));
+}
+
+.chat-context input[type="checkbox"]:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+.chat-context input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .chat-context-disabled {
@@ -350,32 +392,59 @@ details summary {
   color: var(--vscode-foreground);
 }
 
+/* Mirrors the native editor suggest widget: UI font, file icon, dim path. */
 .mention-dropdown {
   position: absolute;
   bottom: 100%;
   left: 0;
   right: 0;
   margin: 0 0 4px;
-  padding: 4px;
+  padding: 2px;
   list-style: none;
-  max-height: 180px;
+  max-height: 190px;
   overflow-y: auto;
+  overflow-x: hidden;
+  font-family: var(--vscode-font-family, "Segoe WPC", "Segoe UI", sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-editorSuggestWidget-foreground, var(--vscode-foreground));
   background: var(--vscode-editorSuggestWidget-background, var(--vscode-editorWidget-background));
-  border: 1px solid var(--vscode-editorSuggestWidget-border, var(--vscode-panel-border));
-  border-radius: 6px;
+  border: 1px solid var(--vscode-editorSuggestWidget-border, var(--vscode-editorWidget-border));
+  border-radius: 5px;
   z-index: 10;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.32));
 }
 
 .mention-dropdown li {
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-family: var(--vscode-editor-font-family, monospace);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 3px;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.mention-dropdown li .codicon {
+  font-size: 14px;
+  flex: none;
+  color: var(--vscode-symbolIcon-fileForeground, var(--vscode-icon-foreground));
+}
+
+.mention-name {
+  flex: none;
+  overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mention-dir {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9em;
+  opacity: 0.65;
 }
 
 .mention-dropdown li.active,
@@ -388,6 +457,16 @@ details summary {
     --vscode-editorSuggestWidget-selectedForeground,
     var(--vscode-list-activeSelectionForeground)
   );
+}
+
+.mention-dropdown li.active .codicon,
+.mention-dropdown li:hover .codicon {
+  color: inherit;
+}
+
+.mention-dropdown li.active .mention-dir,
+.mention-dropdown li:hover .mention-dir {
+  opacity: 0.8;
 }
 
 .chat-input textarea {
