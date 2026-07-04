@@ -48,13 +48,15 @@ export function registerRefineCommand(
       }
       if (!promptId) {
         void vscode.window.showWarningMessage(
-          "Abra um prompt do Sobek (prompt.md) ou use o menu da árvore para refinar."
+          vscode.l10n.t("Open a Sobek prompt (prompt.md) or use the tree menu to refine.")
         );
         return;
       }
       const prompt = store.require(promptId);
       if (prompt.content.trim().length === 0) {
-        void vscode.window.showWarningMessage("O prompt está vazio; escreva algo antes de refinar.");
+        void vscode.window.showWarningMessage(
+          vscode.l10n.t("The prompt is empty; write something before refining.")
+        );
         return;
       }
 
@@ -74,8 +76,9 @@ export function registerRefineCommand(
           .sort((a, b) => a.description.localeCompare(b.description)),
         {
           canPickMany: true,
-          placeHolder:
-            "Arquivos de contexto para o refinamento (opcional — Enter sem seleção para pular)",
+          placeHolder: vscode.l10n.t(
+            "Context files for the refinement (optional — Enter with no selection to skip)"
+          ),
           matchOnDescription: true,
         }
       );
@@ -83,8 +86,8 @@ export function registerRefineCommand(
         return;
       }
       const customInstructions = await vscode.window.showInputBox({
-        prompt: "Instruções adicionais para o refinamento (opcional — Enter para pular)",
-        placeHolder: "Ex.: mantenha o prompt curto e em formato de checklist",
+        prompt: vscode.l10n.t("Additional refinement instructions (optional — Enter to skip)"),
+        placeHolder: vscode.l10n.t("E.g.: keep the prompt short and as a checklist"),
         ignoreFocusOut: true,
       });
       if (customInstructions === undefined) {
@@ -96,7 +99,7 @@ export function registerRefineCommand(
         refined = await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: "Sobek: refinando prompt com Gemini...",
+            title: vscode.l10n.t("Sobek: refining prompt with Gemini..."),
             cancellable: true,
           },
           async (_progress, token) => {
@@ -115,30 +118,33 @@ export function registerRefineCommand(
         if ((error as Error).name === "AbortError") {
           return;
         }
-        void vscode.window.showErrorMessage(`Refinamento falhou: ${(error as Error).message}`);
+        void vscode.window.showErrorMessage(
+          vscode.l10n.t("Refinement failed: {0}", (error as Error).message)
+        );
         return;
       }
       if (!refined) {
-        void vscode.window.showWarningMessage("O Gemini retornou uma resposta vazia.");
+        void vscode.window.showWarningMessage(vscode.l10n.t("Gemini returned an empty response."));
         return;
       }
 
       const originalUri = previews.set(`${prompt.id}-original`, prompt.content);
-      const refinedUri = previews.set(`${prompt.id}-refinado`, refined);
+      const refinedUri = previews.set(`${prompt.id}-refined`, refined);
       await vscode.commands.executeCommand(
         "vscode.diff",
         originalUri,
         refinedUri,
-        `Refinar: ${prompt.title}`,
+        vscode.l10n.t("Refine: {0}", prompt.title),
         { preview: true }
       );
 
+      const applyLabel = vscode.l10n.t("Apply");
       const action = await vscode.window.showInformationMessage(
-        "Aplicar o prompt refinado?",
-        "Aplicar",
-        "Descartar"
+        vscode.l10n.t("Apply the refined prompt?"),
+        applyLabel,
+        vscode.l10n.t("Discard")
       );
-      if (action !== "Aplicar") {
+      if (action !== applyLabel) {
         return;
       }
       await store.update(prompt.id, { content: refined });
@@ -156,12 +162,14 @@ export function registerRefineCommand(
         await vscode.workspace.applyEdit(edit);
         await document.save();
       }
-      void vscode.window.showInformationMessage("Prompt refinado aplicado (nova versão criada).");
+      void vscode.window.showInformationMessage(
+        vscode.l10n.t("Refined prompt applied (new version created).")
+      );
     }),
 
     vscode.commands.registerCommand("sobek.setGeminiApiKey", async () => {
       const value = await vscode.window.showInputBox({
-        prompt: "Chave da Gemini API (deixe vazio para remover)",
+        prompt: vscode.l10n.t("Gemini API key (leave empty to remove)"),
         password: true,
         ignoreFocusOut: true,
       });
@@ -170,7 +178,9 @@ export function registerRefineCommand(
       }
       await ai.setApiKey(value.trim() || undefined);
       void vscode.window.showInformationMessage(
-        value.trim() ? "Chave Gemini salva no SecretStorage." : "Chave Gemini removida."
+        value.trim()
+          ? vscode.l10n.t("Gemini key saved to SecretStorage.")
+          : vscode.l10n.t("Gemini key removed.")
       );
     })
   );

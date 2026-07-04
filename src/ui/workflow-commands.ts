@@ -5,13 +5,15 @@ import {
   changeActor,
   completeWorkflow,
   reopenWorkflow,
-  WORKFLOW_ACTOR_LABELS,
   type WorkflowActor,
 } from "../core/workflow";
 import type { PromptStore } from "../store/prompt-store";
+import { workflowActorLabel, workflowEventLabel } from "./labels";
 import type { PromptTreeItem } from "./tree";
 
 type PromptRef = string | PromptTreeItem | undefined;
+
+const ALL_ACTORS: WorkflowActor[] = ["Human", "ClaudeCode", "Codex", "Grok"];
 
 function resolvePromptId(ref: PromptRef): string | undefined {
   return typeof ref === "string" ? ref : ref?.prompt.id;
@@ -36,9 +38,10 @@ export function registerWorkflowCommands(
         return;
       }
       const note = await vscode.window.showInputBox({
-        prompt: "Nota para a timeline da tarefa",
+        prompt: vscode.l10n.t("Note for the task timeline"),
         ignoreFocusOut: true,
-        validateInput: (value) => (value.trim().length === 0 ? "Informe a nota." : undefined),
+        validateInput: (value) =>
+          value.trim().length === 0 ? vscode.l10n.t("Enter the note.") : undefined,
       });
       if (!note) {
         return;
@@ -52,9 +55,10 @@ export function registerWorkflowCommands(
         return;
       }
       const verdict = await vscode.window.showInputBox({
-        prompt: "Veredito da revisão (a tarefa entra na fase de correção)",
+        prompt: vscode.l10n.t("Review verdict (the task moves to the correction phase)"),
         ignoreFocusOut: true,
-        validateInput: (value) => (value.trim().length === 0 ? "Informe o veredito." : undefined),
+        validateInput: (value) =>
+          value.trim().length === 0 ? vscode.l10n.t("Enter the verdict.") : undefined,
       });
       if (!verdict) {
         return;
@@ -70,10 +74,8 @@ export function registerWorkflowCommands(
         return;
       }
       const picked = await vscode.window.showQuickPick(
-        (Object.entries(WORKFLOW_ACTOR_LABELS) as [WorkflowActor, string][]).map(
-          ([actor, label]) => ({ label, actor })
-        ),
-        { placeHolder: "Responsável atual da tarefa" }
+        ALL_ACTORS.map((actor) => ({ label: workflowActorLabel(actor), actor })),
+        { placeHolder: vscode.l10n.t("Current task owner") }
       );
       if (!picked) {
         return;
@@ -105,15 +107,17 @@ export function registerWorkflowCommands(
       const prompt = store.require(id);
       const events = prompt.workflow?.events ?? [];
       if (events.length === 0) {
-        void vscode.window.showInformationMessage("A tarefa ainda não tem timeline.");
+        void vscode.window.showInformationMessage(
+          vscode.l10n.t("This task has no timeline yet.")
+        );
         return;
       }
       const lines = events.map((event) => {
         const when = new Date(event.occurredAt).toLocaleString();
         const phase = event.phaseName ? ` · ${event.phaseName}` : "";
-        const actor = event.actor ? ` · ${WORKFLOW_ACTOR_LABELS[event.actor]}` : "";
+        const actor = event.actor ? ` · ${workflowActorLabel(event.actor)}` : "";
         const note = event.note ? `\n  ${event.note}` : "";
-        return `- **${event.type}** (${when})${phase}${actor}${note}`;
+        return `- **${workflowEventLabel(event.type)}** (${when})${phase}${actor}${note}`;
       });
       const document = await vscode.workspace.openTextDocument({
         language: "markdown",

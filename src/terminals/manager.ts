@@ -64,12 +64,14 @@ export class TerminalManager {
     const { prompt, agent } = options;
 
     if (prompt?.status === "Archived") {
-      void vscode.window.showWarningMessage("Prompt arquivado não abre terminais.");
+      void vscode.window.showWarningMessage(
+        vscode.l10n.t("Archived prompts cannot open terminals.")
+      );
       return undefined;
     }
     if (prompt && this.countFor(prompt.id) >= MAX_SESSIONS_PER_PROMPT) {
       void vscode.window.showWarningMessage(
-        `Limite de ${MAX_SESSIONS_PER_PROMPT} terminais por prompt atingido.`
+        vscode.l10n.t("Limit of {0} terminals per prompt reached.", MAX_SESSIONS_PER_PROMPT)
       );
       return undefined;
     }

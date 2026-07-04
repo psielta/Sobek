@@ -82,6 +82,7 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
         models: this.ai.listModels(),
         settings: this.ai.getSettings(),
         activePrompt: this.activePromptSummary(),
+        language: vscode.env.language,
       },
     });
     view.webview.onDidReceiveMessage((message) => void this.handleMessage(message));
@@ -149,7 +150,7 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
     if (includePromptContext && !prompt) {
       this.post({
         type: "error",
-        message: "Nenhum prompt ativo: abra o prompt.md de um prompt do Sobek.",
+        message: vscode.l10n.t("No active prompt: open a Sobek prompt.md first."),
       });
       return;
     }

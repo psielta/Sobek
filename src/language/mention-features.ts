@@ -49,7 +49,7 @@ export class MentionCompletionProvider implements vscode.CompletionItemProvider 
       item.filterText = relative;
       item.sortText = String(order).padStart(5, "0");
       item.range = range;
-      item.detail = "Menção de arquivo do workspace";
+      item.detail = vscode.l10n.t("Workspace file mention");
       return item;
     };
 
@@ -108,10 +108,13 @@ export class MentionDiagnostics {
         );
         const message =
           issue.reason === "outside-workspace"
-            ? `A menção @${issue.mention.raw} escapa do diretório do workspace.`
+            ? vscode.l10n.t("The mention @{0} escapes the workspace directory.", issue.mention.raw)
             : issue.reason === "not-a-file"
-              ? `A menção @${issue.mention.raw} aponta para um diretório, não um arquivo.`
-              : `Arquivo não encontrado no workspace: ${issue.mention.raw}`;
+              ? vscode.l10n.t(
+                  "The mention @{0} points to a directory, not a file.",
+                  issue.mention.raw
+                )
+              : vscode.l10n.t("File not found in the workspace: {0}", issue.mention.raw);
         const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Warning);
         diagnostic.source = "sobek";
         return diagnostic;
@@ -142,7 +145,7 @@ export class MentionLinkProvider implements vscode.DocumentLinkProvider {
         document.positionAt(mention.end)
       );
       const link = new vscode.DocumentLink(range, vscode.Uri.file(resolved));
-      link.tooltip = "Abrir arquivo mencionado";
+      link.tooltip = vscode.l10n.t("Open mentioned file");
       links.push(link);
     }
     return links;

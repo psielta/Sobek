@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import type { Prompt } from "../core/prompt";
-import { PROMPT_STATUS_LABELS, TARGET_AGENT_LABELS, isRootPrompt } from "../core/prompt";
+import { isRootPrompt } from "../core/prompt";
 import type { PromptStore } from "../store/prompt-store";
+import { promptStatusLabel, targetAgentLabel } from "./labels";
 
 /**
  * Sidebar tree: root prompts at the top level (the workspace listing never
@@ -44,7 +45,7 @@ export class PromptTreeItem extends vscode.TreeItem {
     hasChildren: boolean
   ) {
     super(
-      prompt.title || "(sem título)",
+      prompt.title || vscode.l10n.t("(untitled)"),
       hasChildren
         ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None
@@ -57,8 +58,8 @@ export class PromptTreeItem extends vscode.TreeItem {
       ? `sobekRootPrompt-${prompt.linkedPlan ? "plan" : "noplan"}`
       : "sobekChildPrompt";
 
-    const statusLabel = PROMPT_STATUS_LABELS[prompt.status];
-    const agentLabel = TARGET_AGENT_LABELS[prompt.targetAgent];
+    const statusLabel = promptStatusLabel(prompt.status);
+    const agentLabel = targetAgentLabel(prompt.targetAgent);
     const phase = prompt.workflow?.currentPhaseName;
     this.description = isRoot
       ? [phase, statusLabel].filter(Boolean).join(" · ")
@@ -66,13 +67,19 @@ export class PromptTreeItem extends vscode.TreeItem {
 
     this.tooltip = new vscode.MarkdownString(
       [
-        `**${prompt.title || "(sem título)"}**`,
+        `**${prompt.title || vscode.l10n.t("(untitled)")}**`,
         "",
-        `- Status: ${statusLabel}`,
-        `- Agente: ${agentLabel}`,
-        `- Versão: v${prompt.currentVersion}`,
-        phase ? `- Fase: ${phase} (${prompt.workflow?.status === "Done" ? "concluída" : "ativa"})` : undefined,
-        prompt.linkedPlan ? `- Plano: ${prompt.linkedPlan.displayName}` : undefined,
+        `- ${vscode.l10n.t("Status")}: ${statusLabel}`,
+        `- ${vscode.l10n.t("Agent")}: ${agentLabel}`,
+        `- ${vscode.l10n.t("Version")}: v${prompt.currentVersion}`,
+        phase
+          ? `- ${vscode.l10n.t("Phase")}: ${phase} (${
+              prompt.workflow?.status === "Done" ? vscode.l10n.t("done") : vscode.l10n.t("active")
+            })`
+          : undefined,
+        prompt.linkedPlan
+          ? `- ${vscode.l10n.t("Plan")}: ${prompt.linkedPlan.displayName}`
+          : undefined,
       ]
         .filter((line): line is string => line !== undefined)
         .join("\n")

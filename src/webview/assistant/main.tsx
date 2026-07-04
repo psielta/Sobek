@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { makeTranslator, resolveLocale, type Dictionary } from "../i18n";
 import "@vscode/codicons/dist/codicon.css";
 import "./assistant.css";
 
@@ -39,10 +40,57 @@ const host = window as unknown as {
     models: ModelInfo[];
     settings: AiSettings;
     activePrompt: ActivePrompt | null;
+    language?: string;
   } | null;
   acquireVsCodeApi(): VsCodeApi;
 };
 const vscode = host.acquireVsCodeApi();
+
+type AssistantKey =
+  | "modelInUse"
+  | "aiSettings"
+  | "geminiKey"
+  | "clearChat"
+  | "emptyChat"
+  | "reasoning"
+  | "useAsContext"
+  | "noPromptOpen"
+  | "childPromptOpen"
+  | "promptOpen"
+  | "placeholder"
+  | "stopGeneration"
+  | "sendTitle";
+
+const DICT: Dictionary<AssistantKey> = {
+  modelInUse: { en: "Model in use", "pt-br": "Modelo em uso" },
+  aiSettings: { en: "AI settings", "pt-br": "Configurações de IA" },
+  geminiKey: { en: "Gemini key", "pt-br": "Chave Gemini" },
+  clearChat: { en: "Clear conversation", "pt-br": "Limpar conversa" },
+  emptyChat: {
+    en: "Prompt engineering assistant (Gemini). Ask how to structure, review or split your prompts. Use the box below to attach the open prompt as context.",
+    "pt-br":
+      "Assistente de engenharia de prompts (Gemini). Pergunte sobre como estruturar, revisar ou dividir seus prompts. Use a caixa abaixo para incluir o prompt aberto como contexto.",
+  },
+  reasoning: { en: "Reasoning", "pt-br": "Raciocínio" },
+  useAsContext: { en: "Use as context:", "pt-br": "Usar como contexto:" },
+  noPromptOpen: {
+    en: "no prompt open in the editor",
+    "pt-br": "nenhum prompt aberto no editor",
+  },
+  childPromptOpen: {
+    en: "Child prompt open in the editor",
+    "pt-br": "Prompt filho aberto no editor",
+  },
+  promptOpen: { en: "Prompt open in the editor", "pt-br": "Prompt aberto no editor" },
+  placeholder: {
+    en: "Ask the assistant... (@ mentions files, Shift+Enter for a new line)",
+    "pt-br": "Pergunte ao assistente... (@ menciona arquivos, Shift+Enter quebra linha)",
+  },
+  stopGeneration: { en: "Stop generation", "pt-br": "Parar geração" },
+  sendTitle: { en: "Send (Enter)", "pt-br": "Enviar (Enter)" },
+};
+
+const t = makeTranslator(DICT, resolveLocale(host.__SOBEK_STATE__?.language));
 
 interface LiveMessage {
   answer: string;
@@ -263,28 +311,22 @@ function App() {
   return (
     <div className="chat">
       <header className="chat-header">
-        <span className="chat-model" title="Modelo em uso">
+        <span className="chat-model" title={t("modelInUse")}>
           <i className="codicon codicon-sparkle" /> {settings?.model ?? "gemini"}
         </span>
-        <button onClick={() => vscode.postMessage({ type: "configure" })} title="Configurações de IA">
+        <button onClick={() => vscode.postMessage({ type: "configure" })} title={t("aiSettings")}>
           <i className="codicon codicon-settings-gear" />
         </button>
-        <button onClick={() => vscode.postMessage({ type: "setApiKey" })} title="Chave Gemini">
+        <button onClick={() => vscode.postMessage({ type: "setApiKey" })} title={t("geminiKey")}>
           <i className="codicon codicon-key" />
         </button>
-        <button onClick={() => vscode.postMessage({ type: "clear" })} title="Limpar conversa">
+        <button onClick={() => vscode.postMessage({ type: "clear" })} title={t("clearChat")}>
           <i className="codicon codicon-clear-all" />
         </button>
       </header>
 
       <div className="chat-messages">
-        {history.length === 0 && !live && (
-          <p className="chat-empty">
-            Assistente de engenharia de prompts (Gemini). Pergunte sobre como estruturar,
-            revisar ou dividir seus prompts. Use a caixa abaixo para incluir o prompt aberto
-            como contexto.
-          </p>
-        )}
+        {history.length === 0 && !live && <p className="chat-empty">{t("emptyChat")}</p>}
         {history.map((turn, index) => (
           <div key={index} className={`msg msg-${turn.role}`}>
             {turn.role === "model" ? (
@@ -300,7 +342,7 @@ function App() {
           <div className="msg msg-model">
             {live.thoughts && !live.answer && (
               <details open>
-                <summary>Raciocínio</summary>
+                <summary>{t("reasoning")}</summary>
                 <pre className="thoughts">{live.thoughts}</pre>
               </details>
             )}
@@ -325,15 +367,11 @@ function App() {
             disabled={!activePrompt}
             onChange={(event) => setIncludeContext(event.target.checked)}
           />
-          Usar como contexto:
+          {t("useAsContext")}
           {activePrompt ? (
             <span
               className={`context-chip${includeContext ? " context-chip-on" : ""}`}
-              title={
-                activePrompt.isChild
-                  ? "Prompt filho aberto no editor"
-                  : "Prompt aberto no editor"
-              }
+              title={activePrompt.isChild ? t("childPromptOpen") : t("promptOpen")}
             >
               <i
                 className={`codicon ${activePrompt.isChild ? "codicon-git-branch" : "codicon-note"}`}
@@ -341,9 +379,7 @@ function App() {
               {activePrompt.title}
             </span>
           ) : (
-            <span className="context-chip context-chip-empty">
-              nenhum prompt aberto no editor
-            </span>
+            <span className="context-chip context-chip-empty">{t("noPromptOpen")}</span>
           )}
         </label>
         <div className="chat-input-row">
@@ -375,7 +411,7 @@ function App() {
               ref={textareaRef}
               value={input}
               rows={1}
-              placeholder="Pergunte ao assistente... (@ menciona arquivos, Shift+Enter quebra linha)"
+              placeholder={t("placeholder")}
               onChange={(event) => {
                 setInput(event.target.value);
                 updateMention(event.target.value, event.target.selectionStart ?? 0);
@@ -387,7 +423,7 @@ function App() {
             {busy ? (
               <button
                 className="composer-action stop"
-                title="Parar geração"
+                title={t("stopGeneration")}
                 onClick={() => vscode.postMessage({ type: "stop" })}
               >
                 <i className="codicon codicon-debug-stop" />
@@ -395,7 +431,7 @@ function App() {
             ) : (
               <button
                 className="composer-action"
-                title="Enviar (Enter)"
+                title={t("sendTitle")}
                 onClick={send}
                 disabled={!input.trim()}
               >

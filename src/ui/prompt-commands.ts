@@ -1,15 +1,14 @@
 import * as vscode from "vscode";
-import {
-  PROMPT_STATUS_LABELS,
-  TARGET_AGENT_LABELS,
-  type PromptStatus,
-  type TargetAgent,
-} from "../core/prompt";
+import type { PromptStatus, TargetAgent } from "../core/prompt";
 import type { PromptStore } from "../store/prompt-store";
 import { ChildPromptPreviewProvider } from "./child-preview";
+import { promptStatusLabel, targetAgentLabel } from "./labels";
 import type { PromptTreeItem } from "./tree";
 
 type PromptRef = string | PromptTreeItem | undefined;
+
+const ALL_STATUSES: PromptStatus[] = ["Draft", "Ready", "Archived"];
+const ALL_AGENTS: TargetAgent[] = ["ClaudeCode", "Codex", "Grok"];
 
 function resolvePromptId(ref: PromptRef): string | undefined {
   if (typeof ref === "string") {
@@ -21,12 +20,14 @@ function resolvePromptId(ref: PromptRef): string | undefined {
 async function pickRootPrompt(store: PromptStore, placeHolder: string): Promise<string | undefined> {
   const roots = store.listRoots().filter((prompt) => prompt.status !== "Archived");
   if (roots.length === 0) {
-    void vscode.window.showInformationMessage("Nenhum prompt ativo no workspace.");
+    void vscode.window.showInformationMessage(
+      vscode.l10n.t("No active prompts in this workspace.")
+    );
     return undefined;
   }
   const picked = await vscode.window.showQuickPick(
     roots.map((prompt) => ({
-      label: prompt.title || "(sem título)",
+      label: prompt.title || vscode.l10n.t("(untitled)"),
       description: prompt.workflow?.currentPhaseName,
       id: prompt.id,
     })),
@@ -40,7 +41,7 @@ export function registerPromptCommands(
   store: PromptStore
 ): void {
   const open = async (ref: PromptRef) => {
-    const id = resolvePromptId(ref) ?? (await pickRootPrompt(store, "Abrir prompt"));
+    const id = resolvePromptId(ref) ?? (await pickRootPrompt(store, vscode.l10n.t("Open prompt")));
     if (!id) {
       return;
     }
@@ -68,9 +69,10 @@ export function registerPromptCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand("sobek.createPrompt", async () => {
       const title = await vscode.window.showInputBox({
-        prompt: "Título do novo prompt",
-        placeHolder: "Ex.: Implementar exportação CSV",
-        validateInput: (value) => (value.trim().length === 0 ? "Informe um título." : undefined),
+        prompt: vscode.l10n.t("Title for the new prompt"),
+        placeHolder: vscode.l10n.t("E.g.: Implement CSV export"),
+        validateInput: (value) =>
+          value.trim().length === 0 ? vscode.l10n.t("Enter a title.") : undefined,
       });
       if (!title) {
         return;
@@ -83,12 +85,14 @@ export function registerPromptCommands(
     vscode.commands.registerCommand("sobek.openChildPrompt", openChild),
 
     vscode.commands.registerCommand("sobek.copyPromptContent", async (ref: PromptRef) => {
-      const id = resolvePromptId(ref) ?? (await pickRootPrompt(store, "Copiar conteúdo de qual prompt?"));
+      const id =
+        resolvePromptId(ref) ??
+        (await pickRootPrompt(store, vscode.l10n.t("Copy content of which prompt?")));
       if (!id) {
         return;
       }
       await vscode.env.clipboard.writeText(store.require(id).content);
-      void vscode.window.showInformationMessage("Conteúdo do prompt copiado.");
+      void vscode.window.showInformationMessage(vscode.l10n.t("Prompt content copied."));
     }),
 
     vscode.commands.registerCommand("sobek.renamePrompt", async (ref: PromptRef) => {
@@ -98,9 +102,10 @@ export function registerPromptCommands(
       }
       const prompt = store.require(id);
       const title = await vscode.window.showInputBox({
-        prompt: "Novo título",
+        prompt: vscode.l10n.t("New title"),
         value: prompt.title,
-        validateInput: (value) => (value.trim().length === 0 ? "Informe um título." : undefined),
+        validateInput: (value) =>
+          value.trim().length === 0 ? vscode.l10n.t("Enter a title.") : undefined,
       });
       if (!title || title.trim() === prompt.title) {
         return;
@@ -115,13 +120,14 @@ export function registerPromptCommands(
       }
       const prompt = store.require(id);
       const picked = await vscode.window.showQuickPick(
-        (Object.entries(PROMPT_STATUS_LABELS) as [PromptStatus, string][]).map(
-          ([status, label]) => ({
-            label: status === prompt.status ? `$(check) ${label}` : label,
-            status,
-          })
-        ),
-        { placeHolder: "Status do prompt" }
+        ALL_STATUSES.map((status) => ({
+          label:
+            status === prompt.status
+              ? `$(check) ${promptStatusLabel(status)}`
+              : promptStatusLabel(status),
+          status,
+        })),
+        { placeHolder: vscode.l10n.t("Prompt status") }
       );
       if (!picked || picked.status === prompt.status) {
         return;
@@ -136,11 +142,14 @@ export function registerPromptCommands(
       }
       const prompt = store.require(id);
       const picked = await vscode.window.showQuickPick(
-        (Object.entries(TARGET_AGENT_LABELS) as [TargetAgent, string][]).map(([agent, label]) => ({
-          label: agent === prompt.targetAgent ? `$(check) ${label}` : label,
+        ALL_AGENTS.map((agent) => ({
+          label:
+            agent === prompt.targetAgent
+              ? `$(check) ${targetAgentLabel(agent)}`
+              : targetAgentLabel(agent),
           agent,
         })),
-        { placeHolder: "Agente alvo do prompt" }
+        { placeHolder: vscode.l10n.t("Target agent for the prompt") }
       );
       if (!picked || picked.agent === prompt.targetAgent) {
         return;
@@ -154,7 +163,7 @@ export function registerPromptCommands(
         return;
       }
       await store.updateStatus(id, "Archived");
-      void vscode.window.showInformationMessage("Prompt arquivado.");
+      void vscode.window.showInformationMessage(vscode.l10n.t("Prompt archived."));
     }),
 
     vscode.commands.registerCommand("sobek.deletePrompt", async (ref: PromptRef) => {
@@ -164,13 +173,21 @@ export function registerPromptCommands(
       }
       const prompt = store.require(id);
       const children = store.listChildren(id).length;
-      const detail = children > 0 ? ` e seus ${children} prompt(s) filho(s)` : "";
+      const message =
+        children > 0
+          ? vscode.l10n.t(
+              'Delete prompt "{0}" and its {1} child prompt(s)? This cannot be undone.',
+              prompt.title,
+              children
+            )
+          : vscode.l10n.t('Delete prompt "{0}"? This cannot be undone.', prompt.title);
+      const confirmLabel = vscode.l10n.t("Delete");
       const confirmation = await vscode.window.showWarningMessage(
-        `Excluir o prompt "${prompt.title}"${detail}? Essa ação não pode ser desfeita.`,
+        message,
         { modal: true },
-        "Excluir"
+        confirmLabel
       );
-      if (confirmation !== "Excluir") {
+      if (confirmation !== confirmLabel) {
         return;
       }
       await store.delete(id);
@@ -189,7 +206,7 @@ export function registerPromptCommands(
           detail: version.title,
           version,
         })),
-        { placeHolder: "Histórico de versões do prompt" }
+        { placeHolder: vscode.l10n.t("Prompt version history") }
       );
       if (!picked) {
         return;

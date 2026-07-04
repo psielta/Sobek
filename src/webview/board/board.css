@@ -136,22 +136,19 @@ body {
 }
 
 /* Empty columns keep a visible drop target instead of collapsing. */
-.column-droppable .column-cards:empty {
+.column-empty {
+  flex: 1;
   border: 1px dashed var(--vscode-panel-border);
   border-radius: 6px;
   min-height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.column-droppable .column-cards:empty::after {
-  content: "Solte um cartão aqui";
   font-size: 11px;
   opacity: 0.45;
 }
 
-.column-over .column-cards:empty {
+.column-over .column-empty {
   border-color: var(--vscode-focusBorder);
 }
 

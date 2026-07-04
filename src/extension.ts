@@ -27,7 +27,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await initialize(context);
   } catch (error) {
     void vscode.window.showErrorMessage(
-      `Sobek falhou ao ativar: ${(error as Error).message}`
+      vscode.l10n.t("Sobek failed to activate: {0}", (error as Error).message)
     );
     throw error;
   }
@@ -40,7 +40,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 function registerNoWorkspaceFallback(context: vscode.ExtensionContext): void {
   const warn = () =>
     void vscode.window.showWarningMessage(
-      "Abra uma pasta para usar o Sobek: o workspace aberto é o diretório alvo dos prompts."
+      vscode.l10n.t(
+        "Open a folder to use Sobek: the open workspace is the target directory for prompts."
+      )
     );
   const commands = [
     "sobek.createPrompt",

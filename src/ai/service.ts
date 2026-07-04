@@ -75,7 +75,9 @@ export class AiService {
     const apiKey = await this.getApiKey();
     if (!apiKey) {
       throw new Error(
-        'IA indisponível: configure a chave Gemini com o comando "Sobek: Configurar chave Gemini".'
+        vscode.l10n.t(
+          'AI unavailable: set the Gemini key with the "Sobek: Set Gemini API Key" command.'
+        )
       );
     }
     return new GeminiClient({ apiKey });

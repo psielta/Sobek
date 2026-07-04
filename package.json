@@ -1,7 +1,7 @@
 {
   "name": "sobek",
   "displayName": "Sobek",
-  "description": "Prompt engineering workbench for AI coding agents: versioned Markdown prompts, child prompt generation, kanban workflow and agent terminals bound to your workspace.",
+  "description": "%ext.description%",
   "version": "0.1.0",
   "publisher": "psielta",
   "license": "MIT",
@@ -26,6 +26,7 @@
     "agents"
   ],
   "main": "./dist/extension.js",
+  "l10n": "./l10n",
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -43,184 +44,184 @@
       "sobek": [
         {
           "id": "sobekPrompts",
-          "name": "Prompts",
+          "name": "%view.prompts%",
           "icon": "media/sobek.svg",
-          "contextualTitle": "Sobek: Prompts"
+          "contextualTitle": "Sobek"
         },
         {
           "id": "sobekAssistant",
           "type": "webview",
-          "name": "Assistente IA",
+          "name": "%view.assistant%",
           "icon": "media/sobek.svg",
-          "contextualTitle": "Sobek: IA"
+          "contextualTitle": "Sobek"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "sobekPrompts",
-        "contents": "Nenhum prompt neste workspace ainda.\n[Criar prompt](command:sobek.createPrompt)\nOs prompts ficam versionados em `.sobek/` na raiz do workspace.",
+        "contents": "%welcome.noPrompts%",
         "when": "sobek.hasWorkspace"
       },
       {
         "view": "sobekPrompts",
-        "contents": "Abra uma pasta para usar o Sobek: o workspace aberto é o diretório alvo dos prompts.",
+        "contents": "%welcome.noWorkspace%",
         "when": "!sobek.hasWorkspace"
       }
     ],
     "commands": [
       {
         "command": "sobek.createPrompt",
-        "title": "Novo prompt",
+        "title": "%cmd.createPrompt%",
         "category": "Sobek",
         "icon": "$(add)"
       },
       {
         "command": "sobek.refreshPrompts",
-        "title": "Recarregar prompts",
+        "title": "%cmd.refreshPrompts%",
         "category": "Sobek",
         "icon": "$(refresh)"
       },
       {
         "command": "sobek.openPrompt",
-        "title": "Abrir prompt",
+        "title": "%cmd.openPrompt%",
         "category": "Sobek"
       },
       {
         "command": "sobek.openChildPrompt",
-        "title": "Abrir prompt filho",
+        "title": "%cmd.openChildPrompt%",
         "category": "Sobek"
       },
       {
         "command": "sobek.copyPromptContent",
-        "title": "Copiar prompt",
+        "title": "%cmd.copyPromptContent%",
         "category": "Sobek",
         "icon": "$(copy)"
       },
       {
         "command": "sobek.renamePrompt",
-        "title": "Renomear prompt",
+        "title": "%cmd.renamePrompt%",
         "category": "Sobek"
       },
       {
         "command": "sobek.setPromptStatus",
-        "title": "Alterar status",
+        "title": "%cmd.setPromptStatus%",
         "category": "Sobek"
       },
       {
         "command": "sobek.setTargetAgent",
-        "title": "Alterar agente alvo",
+        "title": "%cmd.setTargetAgent%",
         "category": "Sobek"
       },
       {
         "command": "sobek.archivePrompt",
-        "title": "Arquivar prompt",
+        "title": "%cmd.archivePrompt%",
         "category": "Sobek",
         "icon": "$(archive)"
       },
       {
         "command": "sobek.deletePrompt",
-        "title": "Excluir prompt",
+        "title": "%cmd.deletePrompt%",
         "category": "Sobek",
         "icon": "$(trash)"
       },
       {
         "command": "sobek.showPromptVersions",
-        "title": "Histórico de versões",
+        "title": "%cmd.showPromptVersions%",
         "category": "Sobek",
         "icon": "$(history)"
       },
       {
         "command": "sobek.generateChildPrompt",
-        "title": "Gerar prompt filho",
+        "title": "%cmd.generateChildPrompt%",
         "category": "Sobek",
         "icon": "$(type-hierarchy-sub)"
       },
       {
         "command": "sobek.linkPlan",
-        "title": "Vincular plano Markdown",
+        "title": "%cmd.linkPlan%",
         "category": "Sobek",
         "icon": "$(link)"
       },
       {
         "command": "sobek.unlinkPlan",
-        "title": "Desvincular plano",
+        "title": "%cmd.unlinkPlan%",
         "category": "Sobek"
       },
       {
         "command": "sobek.newPromptTerminal",
-        "title": "Novo terminal do prompt",
+        "title": "%cmd.newPromptTerminal%",
         "category": "Sobek",
         "icon": "$(terminal)"
       },
       {
         "command": "sobek.launchAgentTerminal",
-        "title": "Iniciar agente no terminal",
+        "title": "%cmd.launchAgentTerminal%",
         "category": "Sobek",
         "icon": "$(robot)"
       },
       {
         "command": "sobek.runPromptInAgentTerminal",
-        "title": "Executar prompt no agente",
+        "title": "%cmd.runPromptInAgentTerminal%",
         "category": "Sobek",
         "icon": "$(play)"
       },
       {
         "command": "sobek.newWorkspaceTerminal",
-        "title": "Novo terminal no workspace",
+        "title": "%cmd.newWorkspaceTerminal%",
         "category": "Sobek"
       },
       {
         "command": "sobek.openBoard",
-        "title": "Abrir board de tarefas",
+        "title": "%cmd.openBoard%",
         "category": "Sobek",
         "icon": "$(layout-panel-justify)"
       },
       {
         "command": "sobek.startWorkflow",
-        "title": "Iniciar fluxo da tarefa",
+        "title": "%cmd.startWorkflow%",
         "category": "Sobek"
       },
       {
         "command": "sobek.addWorkflowNote",
-        "title": "Adicionar nota na timeline",
+        "title": "%cmd.addWorkflowNote%",
         "category": "Sobek"
       },
       {
         "command": "sobek.addReviewVerdict",
-        "title": "Adicionar veredito de revisão",
+        "title": "%cmd.addReviewVerdict%",
         "category": "Sobek"
       },
       {
         "command": "sobek.changeWorkflowActor",
-        "title": "Trocar responsável da tarefa",
+        "title": "%cmd.changeWorkflowActor%",
         "category": "Sobek"
       },
       {
         "command": "sobek.completeWorkflow",
-        "title": "Concluir tarefa",
+        "title": "%cmd.completeWorkflow%",
         "category": "Sobek"
       },
       {
         "command": "sobek.reopenWorkflow",
-        "title": "Reabrir tarefa",
+        "title": "%cmd.reopenWorkflow%",
         "category": "Sobek"
       },
       {
         "command": "sobek.showTimeline",
-        "title": "Ver timeline da tarefa",
+        "title": "%cmd.showTimeline%",
         "category": "Sobek",
         "icon": "$(list-ordered)"
       },
       {
         "command": "sobek.refinePrompt",
-        "title": "Refinar prompt com Gemini",
+        "title": "%cmd.refinePrompt%",
         "category": "Sobek",
         "icon": "$(sparkle)"
       },
       {
         "command": "sobek.setGeminiApiKey",
-        "title": "Configurar chave Gemini",
+        "title": "%cmd.setGeminiApiKey%",
         "category": "Sobek"
       }
     ],
@@ -381,7 +382,7 @@
         "sobek.terminals.showAgentTerminalOfferAfterChildPrompt": {
           "type": "boolean",
           "default": true,
-          "description": "Após criar um prompt filho, oferecer abrir um terminal com o agente alvo já executando o prompt."
+          "description": "%config.showAgentTerminalOffer%"
         },
         "sobek.ai.model": {
           "type": "string",
@@ -393,75 +394,60 @@
             "gemini-2.5-flash",
             "gemini-2.5-pro"
           ],
-          "enumDescriptions": [
-            "Gemini 3.5 Flash (raciocínio por nível)",
-            "Gemini 3.1 Pro Preview (raciocínio por nível)",
-            "Gemini 3.1 Flash Lite (raciocínio por nível)",
-            "Gemini 2.5 Flash (raciocínio por budget de tokens)",
-            "Gemini 2.5 Pro (raciocínio por budget de tokens)"
-          ],
-          "description": "Modelo Gemini usado no refinamento de prompts e no chat."
+          "description": "%config.aiModel%"
         },
         "sobek.ai.temperature": {
           "type": "number",
           "default": 0.7,
           "minimum": 0,
           "maximum": 2,
-          "description": "Temperatura das chamadas Gemini (0 a 2)."
+          "description": "%config.aiTemperature%"
         },
         "sobek.ai.thinkingEnabled": {
           "type": "boolean",
           "default": true,
-          "description": "Habilita raciocínio (thinking) nos modelos que permitem desativá-lo."
+          "description": "%config.aiThinkingEnabled%"
         },
         "sobek.ai.thinkingLevel": {
           "type": "string",
           "default": "high",
-          "enum": [
-            "minimal",
-            "low",
-            "medium",
-            "high"
-          ],
-          "description": "Nível de raciocínio para modelos Gemini 3.x."
+          "enum": ["minimal", "low", "medium", "high"],
+          "description": "%config.aiThinkingLevel%"
         },
         "sobek.ai.thinkingBudget": {
-          "type": [
-            "number",
-            "null"
-          ],
+          "type": ["number", "null"],
           "default": null,
-          "description": "Budget de tokens de raciocínio para modelos Gemini 2.5 (vazio usa um padrão)."
+          "description": "%config.aiThinkingBudget%"
         },
         "sobek.ai.useWorkspaceContext": {
           "type": "boolean",
           "default": false,
-          "description": "Injeta README.md, CLAUDE.md, AGENT.md, AGENTS.md, GEMINI.md e .github/copilot-instructions.md da raiz do workspace nas instruções de sistema do Gemini."
+          "description": "%config.aiUseWorkspaceContext%"
         },
         "sobek.ai.includeMentionedFiles": {
           "type": "boolean",
           "default": true,
-          "description": "Inclui automaticamente o conteúdo dos arquivos @mencionados no prompt como contexto da IA."
+          "description": "%config.aiIncludeMentionedFiles%"
         },
         "sobek.ai.includeLinkedPlan": {
           "type": "boolean",
           "default": true,
-          "description": "Inclui o conteúdo do plano vinculado do prompt como contexto da IA."
+          "description": "%config.aiIncludeLinkedPlan%"
         },
         "sobek.ai.includeParentPrompt": {
           "type": "boolean",
           "default": true,
-          "description": "Ao trabalhar em um prompt filho, inclui o conteúdo do prompt pai como contexto da IA."
+          "description": "%config.aiIncludeParentPrompt%"
         },
         "sobek.ai.includeWorkflowContext": {
           "type": "boolean",
           "default": true,
-          "description": "Inclui o estado da tarefa (fase atual, responsável, últimas notas) como contexto da IA."
+          "description": "%config.aiIncludeWorkflowContext%"
         },
         "sobek.ai.includeGitContext": {
           "type": "boolean",
           "default": false,
-          "description": "Inclui branch atual e últimos commits do repositório como contexto da IA."
+          "description": "%config.aiIncludeGitContext%"
         }
       }
     }

@@ -39,13 +39,13 @@ async function pickPlanFile(workspaceRoot: string): Promise<string | undefined> 
     500
   );
   const browseItem = {
-    label: "$(folder-opened) Procurar arquivo...",
-    description: "Selecionar um Markdown em qualquer diretório",
+    label: `$(folder-opened) ${vscode.l10n.t("Browse files...")}`,
+    description: vscode.l10n.t("Pick a Markdown file from any directory"),
     action: "browse" as const,
   };
   const typeItem = {
-    label: "$(edit) Digitar caminho...",
-    description: "Informar o caminho absoluto ou relativo do plano",
+    label: `$(edit) ${vscode.l10n.t("Type a path...")}`,
+    description: vscode.l10n.t("Enter the plan's absolute or relative path"),
     action: "type" as const,
   };
   const fileItems = files
@@ -58,7 +58,9 @@ async function pickPlanFile(workspaceRoot: string): Promise<string | undefined> 
     .sort((a, b) => a.description.localeCompare(b.description));
 
   const picked = await vscode.window.showQuickPick([browseItem, typeItem, ...fileItems], {
-    placeHolder: "Plano Markdown (ex.: plano gerado pelo Claude Code — pode estar fora do workspace)",
+    placeHolder: vscode.l10n.t(
+      "Markdown plan (e.g. a Claude Code plan — it can live outside the workspace)"
+    ),
     matchOnDescription: true,
   });
   if (!picked) {
@@ -69,7 +71,7 @@ async function pickPlanFile(workspaceRoot: string): Promise<string | undefined> 
     const selection = await vscode.window.showOpenDialog({
       canSelectMany: false,
       defaultUri: vscode.Uri.file(workspaceRoot),
-      openLabel: "Vincular plano",
+      openLabel: vscode.l10n.t("Link plan"),
       filters: { Markdown: ["md", "markdown"] },
     });
     return selection?.[0] ? toPlanPath(workspaceRoot, selection[0].fsPath) : undefined;
@@ -77,15 +79,15 @@ async function pickPlanFile(workspaceRoot: string): Promise<string | undefined> 
 
   if (picked.action === "type") {
     const typed = await vscode.window.showInputBox({
-      prompt: "Caminho do plano Markdown (absoluto ou relativo ao workspace)",
-      placeHolder: "Ex.: C:\\Users\\voce\\planos\\plano.md ou docs/plano.md",
+      prompt: vscode.l10n.t("Path to the Markdown plan (absolute or workspace-relative)"),
+      placeHolder: vscode.l10n.t("E.g.: C:\\plans\\plan.md or docs/plan.md"),
       ignoreFocusOut: true,
       validateInput: (value) => {
         if (value.trim().length === 0) {
-          return "Informe um caminho.";
+          return vscode.l10n.t("Enter a path.");
         }
         const resolved = path.resolve(workspaceRoot, value.trim());
-        return fs.existsSync(resolved) ? undefined : "Arquivo não encontrado.";
+        return fs.existsSync(resolved) ? undefined : vscode.l10n.t("File not found.");
       },
     });
     if (!typed) {
@@ -101,11 +103,14 @@ async function ensureLinkedPlan(store: PromptStore, prompt: Prompt): Promise<Pro
   if (prompt.linkedPlan) {
     return prompt;
   }
+  const linkLabel = vscode.l10n.t("Link plan");
   const answer = await vscode.window.showInformationMessage(
-    "Este prompt ainda não tem um plano vinculado. Prompts filhos são gerados a partir de um plano Markdown.",
-    "Vincular plano"
+    vscode.l10n.t(
+      "This prompt has no linked plan yet. Child prompts are generated from a Markdown plan."
+    ),
+    linkLabel
   );
-  if (answer !== "Vincular plano") {
+  if (answer !== linkLabel) {
     return undefined;
   }
   const planPath = await pickPlanFile(store.root);
@@ -128,11 +133,12 @@ async function collectInputs(
   if (templateRequiresPullRequest(template.key)) {
     const prDefinition = template.inputs.find((input) => input.key === "pullRequest");
     pullRequestInput = await vscode.window.showInputBox({
-      prompt: prDefinition?.helpText ?? "Informe o número ou link da PR.",
-      placeHolder: prDefinition?.placeholder ?? "#123 ou URL da PR",
+      prompt: prDefinition?.helpText ?? vscode.l10n.t("Enter the PR number or URL."),
+      placeHolder: prDefinition?.placeholder ?? vscode.l10n.t("#123 or PR URL"),
       value: storedPullRequest,
       ignoreFocusOut: true,
-      validateInput: (value) => (value.trim().length === 0 ? "A PR é obrigatória." : undefined),
+      validateInput: (value) =>
+        value.trim().length === 0 ? vscode.l10n.t("The PR is required.") : undefined,
     });
     if (pullRequestInput === undefined) {
       return undefined;
@@ -147,13 +153,16 @@ async function collectInputs(
       const source = await vscode.window.showQuickPick(
         [
           {
-            label: "$(clippy) Colar da área de transferência",
+            label: `$(clippy) ${vscode.l10n.t("Paste from clipboard")}`,
             description: input.placeholder,
             action: "clipboard" as const,
           },
-          { label: "$(edit) Digitar manualmente", action: "type" as const },
+          { label: `$(edit) ${vscode.l10n.t("Type manually")}`, action: "type" as const },
         ],
-        { placeHolder: `${input.label}: como fornecer o conteúdo?`, ignoreFocusOut: true }
+        {
+          placeHolder: vscode.l10n.t("{0}: how to provide the content?", input.label),
+          ignoreFocusOut: true,
+        }
       );
       if (!source) {
         return undefined;
@@ -162,7 +171,7 @@ async function collectInputs(
       if (source.action === "clipboard") {
         value = (await vscode.env.clipboard.readText()).trim();
         if (!value) {
-          void vscode.window.showWarningMessage("A área de transferência está vazia.");
+          void vscode.window.showWarningMessage(vscode.l10n.t("The clipboard is empty."));
           return undefined;
         }
       } else {
@@ -171,7 +180,7 @@ async function collectInputs(
           ignoreFocusOut: true,
           validateInput: (candidate) =>
             input.required && candidate.trim().length === 0
-              ? `O campo "${input.label}" é obrigatório.`
+              ? vscode.l10n.t('The field "{0}" is required.', input.label)
               : undefined,
         });
         if (value === undefined) {
@@ -186,7 +195,7 @@ async function collectInputs(
         ignoreFocusOut: true,
         validateInput: (candidate) =>
           input.required && candidate.trim().length === 0
-            ? `O campo "${input.label}" é obrigatório.`
+            ? vscode.l10n.t('The field "{0}" is required.', input.label)
             : undefined,
       });
       if (value === undefined) {
@@ -217,7 +226,7 @@ export function registerGenerateChildCommands(
         return;
       }
       await store.setLinkedPlan(id, { path: planPath, displayName: path.basename(planPath) });
-      void vscode.window.showInformationMessage(`Plano vinculado: ${planPath}`);
+      void vscode.window.showInformationMessage(vscode.l10n.t("Plan linked: {0}", planPath));
     }),
 
     vscode.commands.registerCommand("sobek.unlinkPlan", async (ref: PromptRef) => {
@@ -235,11 +244,15 @@ export function registerGenerateChildCommands(
       }
       let parent = store.require(id);
       if (parent.parentPromptId) {
-        void vscode.window.showWarningMessage("Prompts filhos não geram outros filhos.");
+        void vscode.window.showWarningMessage(
+          vscode.l10n.t("Child prompts cannot generate other children.")
+        );
         return;
       }
       if (parent.status === "Archived") {
-        void vscode.window.showWarningMessage("Prompt arquivado não gera prompts filhos.");
+        void vscode.window.showWarningMessage(
+          vscode.l10n.t("Archived prompts cannot generate child prompts.")
+        );
         return;
       }
 
@@ -256,7 +269,7 @@ export function registerGenerateChildCommands(
           description: template.description,
           key: template.key,
         })),
-        { placeHolder: "Template do prompt filho" }
+        { placeHolder: vscode.l10n.t("Child prompt template") }
       );
       if (!pickedTemplate) {
         return;
@@ -285,10 +298,11 @@ export function registerGenerateChildCommands(
       }
 
       const title = await vscode.window.showInputBox({
-        prompt: "Título do prompt filho",
+        prompt: vscode.l10n.t("Child prompt title"),
         value: draft.title,
         ignoreFocusOut: true,
-        validateInput: (value) => (value.trim().length === 0 ? "Informe um título." : undefined),
+        validateInput: (value) =>
+          value.trim().length === 0 ? vscode.l10n.t("Enter a title.") : undefined,
       });
       if (!title) {
         return;
@@ -317,13 +331,14 @@ export function registerGenerateChildCommands(
 
       const updatedParent = store.require(parent.id);
       const phase = updatedParent.workflow?.currentPhaseName;
+      const copyLabel = vscode.l10n.t("Copy prompt");
       const action = await vscode.window.showInformationMessage(
         phase
-          ? `Prompt filho criado. Tarefa avançou para "${phase}".`
-          : "Prompt filho criado.",
-        "Copiar prompt"
+          ? vscode.l10n.t('Child prompt created. Task advanced to "{0}".', phase)
+          : vscode.l10n.t("Child prompt created."),
+        copyLabel
       );
-      if (action === "Copiar prompt") {
+      if (action === copyLabel) {
         await vscode.env.clipboard.writeText(child.content);
       }
 

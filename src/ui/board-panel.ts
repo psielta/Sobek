@@ -7,9 +7,9 @@ import {
   editPhases,
   reopenWorkflow,
   setPhase,
-  WORKFLOW_ACTOR_LABELS,
 } from "../core/workflow";
 import { buildWebviewHtml } from "../lib/webview-html";
+import { workflowActorLabel } from "./labels";
 
 export interface BoardCard {
   id: string;
@@ -41,12 +41,12 @@ function toCard(prompt: Prompt): BoardCard {
   const workflow = prompt.workflow;
   return {
     id: prompt.id,
-    title: prompt.title || "(sem título)",
+    title: prompt.title || vscode.l10n.t("(untitled)"),
     status: prompt.status,
     workflowStatus: workflow?.status,
     phaseName: workflow?.currentPhaseName,
     phaseColor: workflow?.currentPhaseColor,
-    actorLabel: workflow?.currentActor ? WORKFLOW_ACTOR_LABELS[workflow.currentActor] : undefined,
+    actorLabel: workflow?.currentActor ? workflowActorLabel(workflow.currentActor) : undefined,
     iteration: workflow?.currentPhaseIteration ?? 1,
     reviewVerdictSource: workflow?.reviewVerdictSourcePhaseName,
     hasChildren: false,
@@ -72,7 +72,7 @@ export function buildBoardColumns(store: PromptStore): BoardColumn[] {
   if (noWorkflow.length > 0) {
     columns.push({
       id: NO_WORKFLOW_COLUMN,
-      title: "Sem fluxo",
+      title: vscode.l10n.t("No workflow"),
       droppable: false,
       cards: noWorkflow.map((entry) => entry.card),
     });
@@ -116,7 +116,7 @@ export function buildBoardColumns(store: PromptStore): BoardColumn[] {
 
   columns.push({
     id: DONE_COLUMN,
-    title: "Concluídas",
+    title: vscode.l10n.t("Done"),
     droppable: true,
     cards: cards
       .filter((entry) => entry.prompt.workflow?.status === "Done")
@@ -161,7 +161,7 @@ export class BoardPanel {
       extensionUri: context.extensionUri,
       entry: "board",
       title: "Sobek: Board",
-      initialState: { columns: buildBoardColumns(store) },
+      initialState: { columns: buildBoardColumns(store), language: vscode.env.language },
     });
 
     this.disposables.push(
@@ -255,7 +255,7 @@ export class BoardPanel {
           .getSettings()
           .phaseTemplate.find((phase) => phase.name === phaseName);
         if (!templatePhase) {
-          throw new Error(`A fase "${phaseName}" não existe nesta tarefa.`);
+          throw new Error(vscode.l10n.t('Phase "{0}" does not exist in this task.', phaseName));
         }
         editPhases(
           workflow,

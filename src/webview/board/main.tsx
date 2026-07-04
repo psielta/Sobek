@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { makeTranslator, resolveLocale, type Dictionary } from "../i18n";
 import "./board.css";
 
 interface BoardCard {
@@ -32,7 +33,7 @@ interface VsCodeApi {
 }
 
 const host = window as unknown as {
-  __SOBEK_STATE__: { columns: BoardColumn[] } | null;
+  __SOBEK_STATE__: { columns: BoardColumn[]; language?: string } | null;
   acquireVsCodeApi(): VsCodeApi;
 };
 const vscode = host.acquireVsCodeApi();
@@ -41,10 +42,65 @@ type ViewMode = "kanban" | "vertical";
 type StatusFilter = "notArchived" | "Draft" | "Ready" | "Archived";
 type WorkflowFilter = "all" | "Active" | "Done";
 
+type BoardKey =
+  | "search"
+  | "notArchived"
+  | "draft"
+  | "ready"
+  | "archived"
+  | "allFlows"
+  | "inProgress"
+  | "doneFlows"
+  | "modeVertical"
+  | "modeKanban"
+  | "modeToggleTitle"
+  | "openPrompt"
+  | "generateChild"
+  | "advance"
+  | "note"
+  | "archive"
+  | "reReview"
+  | "correctionFrom"
+  | "hasPlan"
+  | "hasChildren"
+  | "dropHere";
+
+const DICT: Dictionary<BoardKey> = {
+  search: { en: "Search task...", "pt-br": "Buscar tarefa..." },
+  notArchived: { en: "Not archived", "pt-br": "Não arquivadas" },
+  draft: { en: "Draft", "pt-br": "Rascunho" },
+  ready: { en: "Ready", "pt-br": "Pronto" },
+  archived: { en: "Archived", "pt-br": "Arquivadas" },
+  allFlows: { en: "All workflows", "pt-br": "Todos os fluxos" },
+  inProgress: { en: "In progress", "pt-br": "Em andamento" },
+  doneFlows: { en: "Done", "pt-br": "Concluídas" },
+  modeVertical: { en: "≡ Vertical", "pt-br": "≡ Vertical" },
+  modeKanban: { en: "▥ Kanban", "pt-br": "▥ Kanban" },
+  modeToggleTitle: {
+    en: "Toggle between kanban and vertical view",
+    "pt-br": "Alternar entre kanban e visão vertical",
+  },
+  openPrompt: { en: "Open prompt", "pt-br": "Abrir prompt" },
+  generateChild: { en: "Generate child", "pt-br": "Gerar filho" },
+  advance: { en: "Advance", "pt-br": "Avançar" },
+  note: { en: "Note", "pt-br": "Nota" },
+  archive: { en: "Archive", "pt-br": "Arquivar" },
+  reReview: { en: "re-review #{0}", "pt-br": "re-review #{0}" },
+  correctionFrom: {
+    en: "Correction originated in review",
+    "pt-br": "Correção originada em revisão",
+  },
+  hasPlan: { en: "Linked plan", "pt-br": "Plano vinculado" },
+  hasChildren: { en: "Has child prompts", "pt-br": "Tem prompts filhos" },
+  dropHere: { en: "Drop a card here", "pt-br": "Solte um cartão aqui" },
+};
+
+const t = makeTranslator(DICT, resolveLocale(host.__SOBEK_STATE__?.language));
+
 const STATUS_LABELS: Record<string, string> = {
-  Draft: "Rascunho",
-  Ready: "Pronto",
-  Archived: "Arquivado",
+  Draft: t("draft"),
+  Ready: t("ready"),
+  Archived: t("archived"),
 };
 
 function matches(card: BoardCard, query: string, status: StatusFilter, flow: WorkflowFilter): boolean {
@@ -73,40 +129,42 @@ function Card({ card }: { card: BoardCard }) {
     >
       <button
         className="card-title"
-        title="Abrir prompt"
+        title={t("openPrompt")}
         onClick={() => vscode.postMessage({ type: "openPrompt", promptId: card.id })}
       >
         {card.title}
       </button>
       <div className="card-badges">
         {card.actorLabel && <span className="badge">{card.actorLabel}</span>}
-        {card.iteration > 1 && <span className="badge badge-warn">re-review #{card.iteration}</span>}
+        {card.iteration > 1 && (
+          <span className="badge badge-warn">{t("reReview", card.iteration)}</span>
+        )}
         {card.reviewVerdictSource && (
-          <span className="badge badge-warn" title="Correção originada em revisão">
+          <span className="badge badge-warn" title={t("correctionFrom")}>
             ⮌ {card.reviewVerdictSource}
           </span>
         )}
         {card.status !== "Ready" && <span className="badge">{STATUS_LABELS[card.status] ?? card.status}</span>}
-        {card.hasLinkedPlan && <span className="badge" title="Plano vinculado">📄</span>}
-        {card.hasChildren && <span className="badge" title="Tem prompts filhos">⑂</span>}
+        {card.hasLinkedPlan && <span className="badge" title={t("hasPlan")}>📄</span>}
+        {card.hasChildren && <span className="badge" title={t("hasChildren")}>⑂</span>}
       </div>
       <div className="card-actions">
         <button onClick={() => vscode.postMessage({ type: "generateChild", promptId: card.id })}>
-          Gerar filho
+          {t("generateChild")}
         </button>
         {card.workflowStatus === "Active" && (
           <button onClick={() => vscode.postMessage({ type: "advance", promptId: card.id })}>
-            Avançar
+            {t("advance")}
           </button>
         )}
         <button onClick={() => vscode.postMessage({ type: "addNote", promptId: card.id })}>
-          Nota
+          {t("note")}
         </button>
         <button
           className="danger"
           onClick={() => vscode.postMessage({ type: "archive", promptId: card.id })}
         >
-          Arquivar
+          {t("archive")}
         </button>
       </div>
     </div>
@@ -148,6 +206,9 @@ function Column({
         {cards.map((card) => (
           <Card key={card.id} card={card} />
         ))}
+        {column.droppable && cards.length === 0 && (
+          <div className="column-empty">{t("dropHere")}</div>
+        )}
       </div>
     </section>
   );
@@ -195,27 +256,27 @@ function App() {
       <div className="toolbar">
         <input
           type="search"
-          placeholder="Buscar tarefa..."
+          placeholder={t("search")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
         <select value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}>
-          <option value="notArchived">Não arquivadas</option>
-          <option value="Draft">Rascunho</option>
-          <option value="Ready">Pronto</option>
-          <option value="Archived">Arquivadas</option>
+          <option value="notArchived">{t("notArchived")}</option>
+          <option value="Draft">{t("draft")}</option>
+          <option value="Ready">{t("ready")}</option>
+          <option value="Archived">{t("archived")}</option>
         </select>
         <select value={flow} onChange={(event) => setFlow(event.target.value as WorkflowFilter)}>
-          <option value="all">Todos os fluxos</option>
-          <option value="Active">Em andamento</option>
-          <option value="Done">Concluídas</option>
+          <option value="all">{t("allFlows")}</option>
+          <option value="Active">{t("inProgress")}</option>
+          <option value="Done">{t("doneFlows")}</option>
         </select>
         <button
           className="mode-toggle"
           onClick={() => setViewMode(viewMode === "kanban" ? "vertical" : "kanban")}
-          title="Alternar entre kanban e visão vertical"
+          title={t("modeToggleTitle")}
         >
-          {viewMode === "kanban" ? "≡ Vertical" : "▥ Kanban"}
+          {viewMode === "kanban" ? t("modeVertical") : t("modeKanban")}
         </button>
       </div>
       <div className={`board board-${viewMode}`}>

@@ -23,27 +23,29 @@ export function agentForTarget(target: TargetAgent): AgentKind {
   }
 }
 
-const AGENT_PICKS: Array<{ label: string; description: string; agent: AgentKind }> = [
-  {
-    label: "Claude",
-    description: "claude --dangerously-skip-permissions --effort max",
-    agent: "Claude",
-  },
-  {
-    label: "Planejar no Claude",
-    description: "Inicia o Claude e preenche o prompt como rascunho de plan mode",
-    agent: "ClaudePlan",
-  },
-  { label: "Codex", description: "codex --yolo", agent: "Codex" },
-  { label: "Grok", description: "grok --always-approve", agent: "Grok" },
-];
+function agentPicks(): Array<{ label: string; description: string; agent: AgentKind }> {
+  return [
+    {
+      label: "Claude",
+      description: "claude --dangerously-skip-permissions --effort max",
+      agent: "Claude",
+    },
+    {
+      label: vscode.l10n.t("Plan with Claude"),
+      description: vscode.l10n.t("Launches Claude and stages the prompt as a plan-mode draft"),
+      agent: "ClaudePlan",
+    },
+    { label: "Codex", description: "codex --yolo", agent: "Codex" },
+    { label: "Grok", description: "grok --always-approve", agent: "Grok" },
+  ];
+}
 
 async function pickAgent(options?: { hidePlan?: boolean }): Promise<AgentKind | undefined> {
   const picks = options?.hidePlan
-    ? AGENT_PICKS.filter((pick) => pick.agent !== "ClaudePlan")
-    : AGENT_PICKS;
+    ? agentPicks().filter((pick) => pick.agent !== "ClaudePlan")
+    : agentPicks();
   const picked = await vscode.window.showQuickPick(picks, {
-    placeHolder: "Agente para iniciar no terminal",
+    placeHolder: vscode.l10n.t("Agent to launch in the terminal"),
   });
   return picked?.agent;
 }
@@ -86,16 +88,18 @@ export function registerTerminalCommands(
         return;
       }
       if (prompt.content.trim().length === 0) {
-        void vscode.window.showWarningMessage("O prompt está vazio.");
+        void vscode.window.showWarningMessage(vscode.l10n.t("The prompt is empty."));
         return;
       }
       const defaultAgent = agentForTarget(prompt.targetAgent);
       const picked = await vscode.window.showQuickPick(
-        AGENT_PICKS.filter((pick) => pick.agent !== "ClaudePlan").map((pick) => ({
-          ...pick,
-          label: pick.agent === defaultAgent ? `$(star-full) ${pick.label}` : pick.label,
-        })),
-        { placeHolder: "Executar o prompt em qual agente?" }
+        agentPicks()
+          .filter((pick) => pick.agent !== "ClaudePlan")
+          .map((pick) => ({
+            ...pick,
+            label: pick.agent === defaultAgent ? `$(star-full) ${pick.label}` : pick.label,
+          })),
+        { placeHolder: vscode.l10n.t("Run the prompt in which agent?") }
       );
       if (!picked) {
         return;
@@ -106,10 +110,10 @@ export function registerTerminalCommands(
     vscode.commands.registerCommand("sobek.newWorkspaceTerminal", async () => {
       const agent = await vscode.window.showQuickPick(
         [
-          { label: "$(terminal) Shell simples", agent: undefined },
-          ...AGENT_PICKS.filter((pick) => pick.agent !== "ClaudePlan"),
+          { label: `$(terminal) ${vscode.l10n.t("Plain shell")}`, agent: undefined },
+          ...agentPicks().filter((pick) => pick.agent !== "ClaudePlan"),
         ],
-        { placeHolder: "Terminal no workspace" }
+        { placeHolder: vscode.l10n.t("Workspace terminal") }
       );
       if (!agent) {
         return;
@@ -134,11 +138,12 @@ export async function offerAgentTerminalForChild(
     return;
   }
   const agent = agentForTarget(child.targetAgent);
+  const runLabel = vscode.l10n.t("Run now");
   const answer = await vscode.window.showInformationMessage(
-    `Abrir terminal com ${agent} executando o prompt filho agora?`,
-    "Executar agora"
+    vscode.l10n.t("Open a terminal with {0} running the child prompt now?", agent),
+    runLabel
   );
-  if (answer !== "Executar agora") {
+  if (answer !== runLabel) {
     return;
   }
   await manager.create({ prompt: child, agent, submitPrompt: true });
