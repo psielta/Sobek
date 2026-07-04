@@ -64,6 +64,7 @@ export class UsageStatusBar {
   private lastClaude: AgentUsage | undefined;
   private lastCodex: AgentUsage | undefined;
   private lastClaudeFetchAt = 0;
+  private retryTimer: NodeJS.Timeout | undefined;
 
   constructor(context: vscode.ExtensionContext) {
     this.claudeItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -146,6 +147,10 @@ export class UsageStatusBar {
       clearInterval(this.pollTimer);
       this.pollTimer = undefined;
     }
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = undefined;
+    }
   }
 
   private async pollTick(): Promise<void> {
@@ -220,6 +225,18 @@ export class UsageStatusBar {
       }
       if (this.lastCodex) {
         this.render(this.codexItem, "Codex", this.lastCodex);
+      }
+
+      // Transient failures (e.g. a 429 during the startup reading) self-heal
+      // even while the poller is asleep: retry once after two minutes.
+      const transient =
+        this.lastClaude?.error === "rate-limited" ||
+        this.lastClaude?.error?.startsWith("http-");
+      if (transient && !this.retryTimer) {
+        this.retryTimer = setTimeout(() => {
+          this.retryTimer = undefined;
+          void this.refresh({ target: "claude" });
+        }, 2 * 60 * 1000);
       }
     } finally {
       this.refreshing = false;
