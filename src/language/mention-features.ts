@@ -1,22 +1,7 @@
 import * as vscode from "vscode";
-import * as path from "node:path";
 import { parseMentions, resolveMentionPath, validateMentions } from "../core/mentions";
 import type { PromptStore } from "../store/prompt-store";
-
-const IGNORED_DIRECTORIES = new Set([
-  "node_modules",
-  ".git",
-  ".sobek",
-  "bin",
-  "obj",
-  "dist",
-  "build",
-  ".next",
-  ".venv",
-  "target",
-  "coverage",
-  "out",
-]);
+import type { WorkspaceFileIndex } from "./file-index";
 
 function isPromptDocument(store: PromptStore, document: vscode.TextDocument): boolean {
   return (
@@ -25,34 +10,17 @@ function isPromptDocument(store: PromptStore, document: vscode.TextDocument): bo
   );
 }
 
-const FIND_EXCLUDE = `{${[...IGNORED_DIRECTORIES].map((dir) => `**/${dir}/**`).join(",")}}`;
-
-/** Searches workspace files by path substring (not just file name). */
-export async function searchWorkspaceFiles(
-  workspaceRoot: string,
-  query: string,
-  limit: number
-): Promise<string[]> {
-  const uris = await vscode.workspace.findFiles("**/*", FIND_EXCLUDE, 2000);
-  const needle = query.trim().toLowerCase();
-  const relatives = uris
-    .map((uri) => path.relative(workspaceRoot, uri.fsPath).replace(/\\/g, "/"))
-    .filter((relative) => !needle || relative.toLowerCase().includes(needle))
-    .sort((a, b) => a.length - b.length || a.localeCompare(b));
-  return relatives.slice(0, limit);
-}
-
 /** `@` completion listing workspace files, like Thoth's TipTap mention picker. */
 export class MentionCompletionProvider implements vscode.CompletionItemProvider {
   constructor(
     private readonly store: PromptStore,
-    private readonly workspaceRoot: string
+    private readonly index: WorkspaceFileIndex
   ) {}
 
   async provideCompletionItems(
     document: vscode.TextDocument,
     position: vscode.Position
-  ): Promise<vscode.CompletionItem[] | undefined> {
+  ): Promise<vscode.CompletionList | undefined> {
     if (!isPromptDocument(this.store, document)) {
       return undefined;
     }
@@ -62,18 +30,22 @@ export class MentionCompletionProvider implements vscode.CompletionItemProvider 
       return undefined;
     }
     const query = match[2] ?? "";
-    const relatives = await searchWorkspaceFiles(this.workspaceRoot, query, 300);
+    const relatives = await this.index.search(query, 100);
     const replaceStart = position.character - query.length;
     const range = new vscode.Range(position.line, replaceStart, position.line, position.character);
-    return relatives.map((relative) => {
+    const items = relatives.map((relative, order) => {
       const item = new vscode.CompletionItem(relative, vscode.CompletionItemKind.File);
       item.insertText = relative;
       // Filter on the whole relative path so typing "src/ma" keeps matching.
       item.filterText = relative;
+      item.sortText = String(order).padStart(4, "0");
       item.range = range;
       item.detail = "Menção de arquivo do workspace";
       return item;
     });
+    // isIncomplete makes VS Code re-query on every keystroke (including
+    // deletions) instead of filtering a stale list — the Copilot approach.
+    return new vscode.CompletionList(items, true);
   }
 }
 

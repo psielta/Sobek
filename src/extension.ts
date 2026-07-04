@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { AiService } from "./ai/service";
+import { WorkspaceFileIndex } from "./language/file-index";
 import {
   MentionCompletionProvider,
   MentionDiagnostics,
@@ -68,6 +69,9 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
   const store = new PromptStore(workspaceRoot);
   await store.load();
 
+  const fileIndex = new WorkspaceFileIndex(workspaceRoot);
+  fileIndex.register(context);
+
   const tree = new PromptTreeProvider(store);
   context.subscriptions.push(
     vscode.window.createTreeView("sobekPrompts", { treeDataProvider: tree, showCollapseAll: true }),
@@ -76,6 +80,7 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
       new ChildPromptPreviewProvider(store)
     ),
     vscode.commands.registerCommand("sobek.refreshPrompts", async () => {
+      fileIndex.refresh();
       await store.load();
     })
   );
@@ -101,7 +106,7 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       AssistantViewProvider.viewType,
-      new AssistantViewProvider(context, store, ai)
+      new AssistantViewProvider(context, store, ai, fileIndex)
     )
   );
 
@@ -109,7 +114,7 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(
       markdownSelector,
-      new MentionCompletionProvider(store, workspaceRoot),
+      new MentionCompletionProvider(store, fileIndex),
       "@"
     ),
     vscode.languages.registerDocumentLinkProvider(

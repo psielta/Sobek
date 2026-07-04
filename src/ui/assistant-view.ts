@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { buildChatUserMessage } from "../ai/instructions";
 import type { AiService, ChatTurn } from "../ai/service";
-import { searchWorkspaceFiles } from "../language/mention-features";
+import type { WorkspaceFileIndex } from "../language/file-index";
 import type { PromptStore } from "../store/prompt-store";
 import { buildWebviewHtml } from "../lib/webview-html";
 
@@ -19,7 +19,8 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly context: vscode.ExtensionContext,
     private readonly store: PromptStore,
-    private readonly ai: AiService
+    private readonly ai: AiService,
+    private readonly fileIndex: WorkspaceFileIndex
   ) {}
 
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -60,7 +61,7 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
   }): Promise<void> {
     switch (message.type) {
       case "searchFiles": {
-        const files = await searchWorkspaceFiles(this.store.root, message.query ?? "", 20);
+        const files = await this.fileIndex.search(message.query ?? "", 30);
         this.post({ type: "fileResults", requestId: message.requestId, files });
         break;
       }
