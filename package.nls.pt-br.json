@@ -39,6 +39,7 @@
   "config.claudeEffort": "Flag --effort do Claude ao abrir terminais: \"ask\" pergunta a cada vez, \"default\" omite a flag, ou fixe low/medium/high/xhigh/max.",
   "config.grokEffort": "Flag --effort do Grok ao abrir terminais: \"ask\" pergunta a cada vez, \"default\" omite a flag, ou fixe low/medium/high/xhigh/max.",
   "config.stageDelay": "Milissegundos de espera pelo boot do CLI antes de digitar o rascunho (modo \"Preencher como rascunho\"). Aumente se o rascunho chegar cortado.",
+  "config.terminalLocation": "Onde os terminais do Sobek abrem: \"ask\" pergunta a cada criação, \"panel\" usa o painel de terminal (Ctrl+`), \"editor\" abre como aba do editor.",
   "config.aiModel": "Modelo Gemini usado no refinamento de prompts e no chat.",
   "config.aiTemperature": "Temperatura das chamadas Gemini (0 a 2).",
   "config.aiThinkingEnabled": "Habilita raciocínio (thinking) nos modelos que permitem desativá-lo.",

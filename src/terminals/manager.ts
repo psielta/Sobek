@@ -24,6 +24,39 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Where the terminal opens: the panel (Ctrl+`) or an editor tab. The
+ * sobek.terminals.location setting pins a choice; "ask" (default) prompts on
+ * every creation. Returns undefined when the user cancels the picker.
+ */
+async function resolveTerminalLocation(): Promise<vscode.TerminalLocation | undefined> {
+  const configured = vscode.workspace
+    .getConfiguration("sobek.terminals")
+    .get<string>("location", "ask");
+  if (configured === "panel") {
+    return vscode.TerminalLocation.Panel;
+  }
+  if (configured === "editor") {
+    return vscode.TerminalLocation.Editor;
+  }
+  const picked = await vscode.window.showQuickPick(
+    [
+      {
+        label: `$(layout-panel) ${vscode.l10n.t("Terminal panel")}`,
+        description: "Ctrl+`",
+        location: vscode.TerminalLocation.Panel,
+      },
+      {
+        label: `$(window) ${vscode.l10n.t("Editor tab")}`,
+        description: vscode.l10n.t("Opens the terminal as an editor tab"),
+        location: vscode.TerminalLocation.Editor,
+      },
+    ],
+    { placeHolder: vscode.l10n.t("Where should the terminal open?") }
+  );
+  return picked?.location;
+}
+
 function detectShellFlavor(): ShellFlavor {
   const shell = vscode.env.shell.toLowerCase();
   if (shell.includes("pwsh") || shell.includes("powershell")) {
@@ -137,6 +170,11 @@ export class TerminalManager {
       return undefined;
     }
 
+    const location = await resolveTerminalLocation();
+    if (location === undefined) {
+      return undefined;
+    }
+
     const defaults = agent ? AGENT_TAB_DEFAULTS[agent] : undefined;
     const baseName = defaults?.name ?? "Terminal";
     const name = prompt ? `${baseName} · ${prompt.title || "prompt"}` : `${baseName} · Sobek`;
@@ -146,6 +184,7 @@ export class TerminalManager {
       cwd: this.store.root,
       color: defaults ? new vscode.ThemeColor(defaults.themeColor) : undefined,
       iconPath: new vscode.ThemeIcon(agent ? "robot" : "terminal"),
+      location,
     });
     this.managed.add({ terminal, promptId: prompt?.id, agent, createdAt: Date.now() });
     this.changeEmitter.fire();

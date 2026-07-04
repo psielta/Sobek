@@ -483,6 +483,12 @@
           "enum": ["ask", "default", "low", "medium", "high", "xhigh", "max"],
           "description": "%config.grokEffort%"
         },
+        "sobek.terminals.location": {
+          "type": "string",
+          "default": "ask",
+          "enum": ["ask", "panel", "editor"],
+          "description": "%config.terminalLocation%"
+        },
         "sobek.terminals.stageDelayMs": {
           "type": "number",
           "default": 3000,

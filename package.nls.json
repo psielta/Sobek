@@ -39,6 +39,7 @@
   "config.claudeEffort": "Claude's --effort flag on terminal launches: \"ask\" prompts every time, \"default\" omits the flag, or pin low/medium/high/xhigh/max.",
   "config.grokEffort": "Grok's --effort flag on terminal launches: \"ask\" prompts every time, \"default\" omits the flag, or pin low/medium/high/xhigh/max.",
   "config.stageDelay": "Milliseconds to wait for the agent CLI to boot before typing a staged draft (\"Stage as draft\" mode). Increase if drafts arrive truncated.",
+  "config.terminalLocation": "Where Sobek terminals open: \"ask\" prompts on every creation, \"panel\" uses the terminal panel (Ctrl+`), \"editor\" opens them as editor tabs.",
   "config.aiModel": "Gemini model used for prompt refinement and chat.",
   "config.aiTemperature": "Temperature for Gemini calls (0 to 2).",
   "config.aiThinkingEnabled": "Enables thinking on models that allow disabling it.",
