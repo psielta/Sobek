@@ -142,18 +142,19 @@ export async function fetchClaudeUsage(options: ClaudeUsageOptions = {}): Promis
   }
 
   const data = (await response.json()) as UsageApiResponse;
+  const clamp = (value: number): number => Math.min(100, Math.max(0, value));
   return {
     fiveHour: {
-      utilization: data.five_hour?.utilization ?? 0,
+      utilization: clamp(data.five_hour?.utilization ?? 0),
       resetsAt: data.five_hour?.resets_at ?? null,
     },
     sevenDay: {
-      utilization: data.seven_day?.utilization ?? 0,
+      utilization: clamp(data.seven_day?.utilization ?? 0),
       resetsAt: data.seven_day?.resets_at ?? null,
     },
     sevenDayOpus: data.seven_day_opus
       ? {
-          utilization: data.seven_day_opus.utilization ?? 0,
+          utilization: clamp(data.seven_day_opus.utilization ?? 0),
           resetsAt: data.seven_day_opus.resets_at ?? null,
         }
       : undefined,

@@ -72,6 +72,17 @@ describe("event extraction", () => {
     expect(extractRateLimitsFromEvent(flat, NOW_SECONDS)?.primary?.used_percent).toBe(7);
   });
 
+  it("reads rate_limits nested under payload.info (Thoth variant)", () => {
+    const nested = {
+      type: "event_msg",
+      payload: {
+        type: "token_count",
+        info: { rate_limits: { primary: { used_percent: 42 } } },
+      },
+    };
+    expect(extractRateLimitsFromEvent(nested, NOW_SECONDS)?.primary?.used_percent).toBe(42);
+  });
+
   it("ignores unrelated events", () => {
     expect(extractRateLimitsFromEvent({ type: "message" }, NOW_SECONDS)).toBeNull();
     expect(extractTokenUsageFromEvent({ type: "message" })).toBeNull();

@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as fs from "node:fs";
 import { defaultClaudeCredentialsPath, fetchClaudeUsage } from "../usage/claude-usage";
 import { defaultCodexSessionsDir, fetchCodexUsage } from "../usage/codex-usage";
 import type { AgentUsage, UsageWindow } from "../usage/types";
@@ -80,6 +81,35 @@ export class UsageStatusBar {
 
     // Initial reading shortly after activation, without slowing it down.
     setTimeout(() => void this.refresh(), 2000);
+    this.watchCodexSessions(context);
+  }
+
+  /**
+   * Like Thoth's FileSystemWatcher on the Codex sessions dir: new JSONL
+   * activity refreshes the indicator with a 500ms debounce. Best-effort —
+   * recursive fs.watch is unavailable on some platforms.
+   */
+  private watchCodexSessions(context: vscode.ExtensionContext): void {
+    const config = vscode.workspace.getConfiguration("sobek.usage");
+    const dir = config.get<string>("codexSessionsPath", "") || defaultCodexSessionsDir();
+    let debounce: NodeJS.Timeout | undefined;
+    try {
+      const watcher = fs.watch(dir, { recursive: true }, () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+          this.recordActivity();
+          void this.refresh();
+        }, 500);
+      });
+      context.subscriptions.push(
+        new vscode.Disposable(() => {
+          clearTimeout(debounce);
+          watcher.close();
+        })
+      );
+    } catch {
+      // Directory missing or recursive watch unsupported — polling covers it.
+    }
   }
 
   /** Wakes the poller; call whenever an agent terminal/AI action happens. */
@@ -171,7 +201,6 @@ export class UsageStatusBar {
       }
     } else {
       const fiveHour = Math.round(usage.fiveHour.utilization);
-      const sevenDay = Math.round(usage.sevenDay.utilization);
       item.text = `${label} ${fiveHour}%`;
       tooltip.appendMarkdown(`${windowLine(vscode.l10n.t("5-hour window"), usage.fiveHour)}\n`);
       tooltip.appendMarkdown(`${windowLine(vscode.l10n.t("7-day window"), usage.sevenDay)}\n`);
@@ -187,11 +216,11 @@ export class UsageStatusBar {
       }
       tooltip.appendMarkdown("\n");
 
-      const worst = Math.max(fiveHour, sevenDay);
+      // Thoth colors by the primary (displayed) window, not the worst one.
       item.backgroundColor =
-        worst >= ERROR_THRESHOLD
+        fiveHour >= ERROR_THRESHOLD
           ? new vscode.ThemeColor("statusBarItem.errorBackground")
-          : worst >= WARNING_THRESHOLD
+          : fiveHour >= WARNING_THRESHOLD
             ? new vscode.ThemeColor("statusBarItem.warningBackground")
             : undefined;
     }

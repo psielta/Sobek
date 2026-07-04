@@ -82,7 +82,9 @@ export function extractRateLimitsFromEvent(
   if (!payload) {
     return null;
   }
-  const rateLimits = payload.rate_limits as CodexRateLimits | undefined;
+  // Thoth reads rate_limits from the payload root OR from payload.info.
+  const info = payload.info as Record<string, unknown> | undefined;
+  const rateLimits = (payload.rate_limits ?? info?.rate_limits) as CodexRateLimits | undefined;
   if (!rateLimits?.primary) {
     return null;
   }
