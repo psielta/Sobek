@@ -8,6 +8,9 @@ const POLL_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // sleep after 60 minutes without activity
 const WARNING_THRESHOLD = 70;
 const ERROR_THRESHOLD = 90;
+/** Anthropic usage API cooldown — Thoth polls it at most once per minute. */
+const CLAUDE_MIN_INTERVAL_MS = 60 * 1000;
+const CLAUDE_FORCED_MIN_INTERVAL_MS = 15 * 1000;
 
 function formatReset(resetsAt: string | null): string | undefined {
   if (!resetsAt) {
@@ -60,6 +63,7 @@ export class UsageStatusBar {
   private refreshing = false;
   private lastClaude: AgentUsage | undefined;
   private lastCodex: AgentUsage | undefined;
+  private lastClaudeFetchAt = 0;
 
   constructor(context: vscode.ExtensionContext) {
     this.claudeItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -71,7 +75,7 @@ export class UsageStatusBar {
       this.codexItem,
       vscode.commands.registerCommand("sobek.refreshAgentUsage", () => {
         this.recordActivity();
-        void this.refresh();
+        void this.refresh({ force: true });
       }),
       vscode.commands.registerCommand("sobek.showAgentUsage", () => {
         this.recordActivity();
@@ -103,8 +107,10 @@ export class UsageStatusBar {
       const watcher = fs.watch(dir, { recursive: true }, () => {
         clearTimeout(debounce);
         debounce = setTimeout(() => {
-          this.recordActivity();
-          void this.refresh();
+          // Codex activity only refreshes the Codex indicator; hitting the
+          // Anthropic API on every JSONL append would trip its rate limit.
+          this.wake();
+          void this.refresh({ target: "codex" });
         }, 500);
       });
       context.subscriptions.push(
@@ -118,11 +124,19 @@ export class UsageStatusBar {
     }
   }
 
-  /** Wakes the poller; call whenever an agent terminal/AI action happens. */
-  recordActivity(): void {
+  /** Starts the poll timer without triggering an immediate fetch. */
+  private wake(): void {
     this.lastActivity = Date.now();
     if (!this.pollTimer) {
       this.pollTimer = setInterval(() => void this.pollTick(), POLL_INTERVAL_MS);
+    }
+  }
+
+  /** Wakes the poller; call whenever an agent terminal/AI action happens. */
+  recordActivity(): void {
+    const wasSleeping = !this.pollTimer;
+    this.wake();
+    if (wasSleeping) {
       void this.refresh();
     }
   }
@@ -147,43 +161,66 @@ export class UsageStatusBar {
     item.tooltip = vscode.l10n.t("Reading {0} usage...", label);
   }
 
-  async refresh(): Promise<void> {
+  async refresh(options: { force?: boolean; target?: "claude" | "codex" | "both" } = {}): Promise<void> {
     if (this.refreshing) {
       return;
     }
     this.refreshing = true;
     try {
+      const target = options.target ?? "both";
       const config = vscode.workspace.getConfiguration("sobek.usage");
       const claudePath = config.get<string>("claudeCredentialsPath", "");
       const codexDir = config.get<string>("codexSessionsPath", "");
 
-      const [claude, codex] = await Promise.all([
-        fetchClaudeUsage({
-          credentialsPath: claudePath || defaultClaudeCredentialsPath(),
-        }).catch(
-          (error): AgentUsage => ({
-            fiveHour: { utilization: 0, resetsAt: null },
-            sevenDay: { utilization: 0, resetsAt: null },
-            limitsAvailable: false,
-            lastUpdated: Date.now(),
-            error: (error as Error).message,
-          })
-        ),
-        fetchCodexUsage({ sessionsDir: codexDir || defaultCodexSessionsDir() }).catch(
-          (error): AgentUsage => ({
-            fiveHour: { utilization: 0, resetsAt: null },
-            sevenDay: { utilization: 0, resetsAt: null },
-            limitsAvailable: false,
-            lastUpdated: Date.now(),
-            error: (error as Error).message,
-          })
-        ),
-      ]);
+      const errorUsage = (error: unknown): AgentUsage => ({
+        fiveHour: { utilization: 0, resetsAt: null },
+        sevenDay: { utilization: 0, resetsAt: null },
+        limitsAvailable: false,
+        lastUpdated: Date.now(),
+        error: (error as Error).message,
+      });
 
-      this.lastClaude = claude;
-      this.lastCodex = codex;
-      this.render(this.claudeItem, "Claude", claude);
-      this.render(this.codexItem, "Codex", codex);
+      const tasks: Array<Promise<void>> = [];
+
+      if (target !== "codex") {
+        // Cooldown so watcher bursts and click spam never trip Anthropic's
+        // rate limit (a 429 here previously stuck the indicator on "--").
+        const minInterval = options.force
+          ? CLAUDE_FORCED_MIN_INTERVAL_MS
+          : CLAUDE_MIN_INTERVAL_MS;
+        if (Date.now() - this.lastClaudeFetchAt >= minInterval) {
+          this.lastClaudeFetchAt = Date.now();
+          tasks.push(
+            fetchClaudeUsage({ credentialsPath: claudePath || defaultClaudeCredentialsPath() })
+              .catch(errorUsage)
+              .then((claude) => {
+                // On 429, keep showing the last good reading instead of "--".
+                if (claude.error === "rate-limited" && this.lastClaude?.limitsAvailable) {
+                  return;
+                }
+                this.lastClaude = claude;
+              })
+          );
+        }
+      }
+
+      if (target !== "claude") {
+        tasks.push(
+          fetchCodexUsage({ sessionsDir: codexDir || defaultCodexSessionsDir() })
+            .catch(errorUsage)
+            .then((codex) => {
+              this.lastCodex = codex;
+            })
+        );
+      }
+
+      await Promise.all(tasks);
+      if (this.lastClaude) {
+        this.render(this.claudeItem, "Claude", this.lastClaude);
+      }
+      if (this.lastCodex) {
+        this.render(this.codexItem, "Codex", this.lastCodex);
+      }
     } finally {
       this.refreshing = false;
     }
