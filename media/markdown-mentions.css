@@ -1,0 +1,9 @@
+/* Styling for @file mentions inside the built-in Markdown preview. */
+.sobek-mention {
+  color: var(--vscode-textLink-foreground);
+  font-weight: 600;
+}
+
+.sobek-mention-broken {
+  color: var(--vscode-editorWarning-foreground);
+}

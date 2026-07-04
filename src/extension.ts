@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { AiService } from "./ai/service";
 import { WorkspaceFileIndex } from "./language/file-index";
+import { extendMarkdownItWithMentions } from "./language/markdown-preview";
 import { MentionDecorations } from "./language/mention-decorations";
 import {
   MentionCompletionProvider,
@@ -26,7 +27,7 @@ import { registerPromptCommands } from "./ui/prompt-commands";
 import { PromptTreeProvider } from "./ui/tree";
 import { registerWorkflowCommands } from "./ui/workflow-commands";
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export async function activate(context: vscode.ExtensionContext): Promise<unknown> {
   try {
     await initialize(context);
   } catch (error) {
@@ -35,6 +36,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     );
     throw error;
   }
+  // Consumed by the built-in Markdown extension (markdown.markdownItPlugins).
+  return {
+    extendMarkdownIt: (md: unknown) => extendMarkdownItWithMentions(md, getWorkspaceRoot),
+  };
 }
 
 /**
