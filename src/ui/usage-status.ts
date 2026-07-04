@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as fs from "node:fs";
 import { defaultClaudeCredentialsPath, fetchClaudeUsage } from "../usage/claude-usage";
 import { defaultCodexSessionsDir, fetchCodexUsage } from "../usage/codex-usage";
-import type { AgentUsage, UsageWindow } from "../usage/types";
+import type { AgentUsage, ScopedUsageWindow, UsageWindow } from "../usage/types";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // sleep after 60 minutes without activity
@@ -31,6 +31,25 @@ function windowLine(label: string, window: UsageWindow): string {
   const reset = formatReset(window.resetsAt);
   const resetSuffix = reset ? ` — ${vscode.l10n.t("resets {0}", reset)}` : "";
   return `- ${label}: **${Math.round(window.utilization)}%**${resetSuffix}`;
+}
+
+/** "7-day window (Fable)" for weekly scoped caps; raw label otherwise. */
+function scopedWindowLabel(window: ScopedUsageWindow): string {
+  return window.group === "weekly"
+    ? vscode.l10n.t("7-day window ({0})", window.label)
+    : window.label;
+}
+
+/** Worst utilization across every reported window, for the item color. */
+function worstUtilization(usage: AgentUsage): number {
+  const extras = usage.extraWindows ?? [];
+  const critical = extras.some((window) => window.critical) ? 100 : 0;
+  return Math.max(
+    usage.fiveHour.utilization,
+    usage.sevenDay.utilization,
+    ...extras.map((window) => window.utilization),
+    critical
+  );
 }
 
 function errorLabel(error: string): string {
@@ -281,10 +300,8 @@ export class UsageStatusBar {
       };
       items.push(windowItem("dashboard", vscode.l10n.t("5-hour window"), usage.fiveHour));
       items.push(windowItem("calendar", vscode.l10n.t("7-day window"), usage.sevenDay));
-      if (usage.sevenDayOpus) {
-        items.push(
-          windowItem("sparkle", vscode.l10n.t("7-day window (Opus)"), usage.sevenDayOpus)
-        );
+      for (const window of usage.extraWindows ?? []) {
+        items.push(windowItem(window.critical ? "flame" : "sparkle", scopedWindowLabel(window), window));
       }
       if (usage.tokenUsage) {
         items.push({
@@ -341,13 +358,17 @@ export class UsageStatusBar {
       }
     } else {
       const fiveHour = Math.round(usage.fiveHour.utilization);
-      item.text = `${label} ${fiveHour}%`;
+      const worst = worstUtilization(usage);
+      // Warn in the bar itself when a non-primary window is the hot one
+      // (e.g. the Fable weekly cap at 93% while the 5h window sits at 14%).
+      item.text =
+        worst >= WARNING_THRESHOLD && worst > fiveHour
+          ? `${label} ${fiveHour}% $(warning)`
+          : `${label} ${fiveHour}%`;
       tooltip.appendMarkdown(`${windowLine(vscode.l10n.t("5-hour window"), usage.fiveHour)}\n`);
       tooltip.appendMarkdown(`${windowLine(vscode.l10n.t("7-day window"), usage.sevenDay)}\n`);
-      if (usage.sevenDayOpus) {
-        tooltip.appendMarkdown(
-          `${windowLine(vscode.l10n.t("7-day window (Opus)"), usage.sevenDayOpus)}\n`
-        );
+      for (const window of usage.extraWindows ?? []) {
+        tooltip.appendMarkdown(`${windowLine(scopedWindowLabel(window), window)}\n`);
       }
       if (usage.tokenUsage) {
         tooltip.appendMarkdown(
@@ -356,11 +377,10 @@ export class UsageStatusBar {
       }
       tooltip.appendMarkdown("\n");
 
-      // Thoth colors by the primary (displayed) window, not the worst one.
       item.backgroundColor =
-        fiveHour >= ERROR_THRESHOLD
+        worst >= ERROR_THRESHOLD
           ? new vscode.ThemeColor("statusBarItem.errorBackground")
-          : fiveHour >= WARNING_THRESHOLD
+          : worst >= WARNING_THRESHOLD
             ? new vscode.ThemeColor("statusBarItem.warningBackground")
             : undefined;
     }

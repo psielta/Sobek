@@ -115,6 +115,7 @@
   "5-hour window": "Janela de 5 horas",
   "7-day window": "Janela de 7 dias",
   "7-day window (Opus)": "Janela de 7 dias (Opus)",
+  "7-day window ({0})": "Janela de 7 dias ({0})",
   "resets {0}": "reseta {0}",
   "Session tokens: {0}": "Tokens da sessão: {0}",
   "Rate limits unavailable; total tokens: {0}": "Limites indisponíveis; total de tokens: {0}",

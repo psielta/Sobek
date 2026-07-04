@@ -86,10 +86,20 @@ interface UsageApiWindow {
   resets_at?: string | null;
 }
 
+interface UsageApiLimit {
+  kind?: string;
+  group?: string;
+  percent?: number;
+  severity?: string;
+  resets_at?: string | null;
+  scope?: { model?: { display_name?: string | null } | null } | null;
+}
+
 interface UsageApiResponse {
   five_hour?: UsageApiWindow;
   seven_day?: UsageApiWindow;
   seven_day_opus?: UsageApiWindow;
+  limits?: UsageApiLimit[];
 }
 
 export interface ClaudeUsageOptions {
@@ -144,6 +154,35 @@ export async function fetchClaudeUsage(options: ClaudeUsageOptions = {}): Promis
 
   const data = (await response.json()) as UsageApiResponse;
   const clamp = (value: number): number => Math.min(100, Math.max(0, value));
+
+  // Scoped windows (per-model weekly caps like Fable) come from the generic
+  // limits array; session and weekly_all duplicate five_hour/seven_day.
+  const extraWindows = (Array.isArray(data.limits) ? data.limits : [])
+    .filter(
+      (limit) =>
+        limit.kind !== "session" &&
+        limit.kind !== "weekly_all" &&
+        typeof limit.percent === "number"
+    )
+    .map((limit) => ({
+      label: limit.scope?.model?.display_name || limit.kind || "limit",
+      group: limit.group,
+      utilization: clamp(limit.percent ?? 0),
+      resetsAt: limit.resets_at ?? null,
+      critical: limit.severity === "critical",
+    }));
+
+  // Older responses only expose the Opus weekly window as a fixed field.
+  if (extraWindows.length === 0 && data.seven_day_opus) {
+    extraWindows.push({
+      label: "Opus",
+      group: "weekly",
+      utilization: clamp(data.seven_day_opus.utilization ?? 0),
+      resetsAt: data.seven_day_opus.resets_at ?? null,
+      critical: false,
+    });
+  }
+
   return {
     fiveHour: {
       utilization: clamp(data.five_hour?.utilization ?? 0),
@@ -153,12 +192,7 @@ export async function fetchClaudeUsage(options: ClaudeUsageOptions = {}): Promis
       utilization: clamp(data.seven_day?.utilization ?? 0),
       resetsAt: data.seven_day?.resets_at ?? null,
     },
-    sevenDayOpus: data.seven_day_opus
-      ? {
-          utilization: clamp(data.seven_day_opus.utilization ?? 0),
-          resetsAt: data.seven_day_opus.resets_at ?? null,
-        }
-      : undefined,
+    extraWindows: extraWindows.length > 0 ? extraWindows : undefined,
     limitsAvailable: true,
     lastUpdated: now,
   };
