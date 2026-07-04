@@ -1,0 +1,61 @@
+{
+  "name": "sobek",
+  "displayName": "Sobek",
+  "description": "Prompt engineering workbench for AI coding agents: versioned Markdown prompts, child prompt generation, kanban workflow and agent terminals bound to your workspace.",
+  "version": "0.1.0",
+  "publisher": "psielta",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/psielta/Sobek.git"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "prompt",
+    "prompt-engineering",
+    "claude",
+    "codex",
+    "gemini",
+    "kanban",
+    "agents"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [],
+    "configuration": {
+      "title": "Sobek"
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/vscode": "^1.96.0",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.2",
+    "eslint": "^9.18.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8"
+  }
+}
