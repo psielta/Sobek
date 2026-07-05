@@ -312,6 +312,11 @@
           "group": "navigation@2"
         },
         {
+          "command": "sobek.createChildTemplate",
+          "when": "view == sobekPrompts",
+          "group": "navigation@3"
+        },
+        {
           "command": "sobek.refreshPrompts",
           "when": "view == sobekPrompts",
           "group": "navigation@9"
@@ -362,11 +367,6 @@
           "command": "sobek.generateChildPrompt",
           "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "0_generate@1"
-        },
-        {
-          "command": "sobek.createChildTemplate",
-          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
-          "group": "0_generate@2"
         },
         {
           "command": "sobek.linkPlan",
