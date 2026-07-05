@@ -145,7 +145,7 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("sobek.openBoard", () => {
-      BoardPanel.show(context, store);
+      BoardPanel.show(context, store, terminals);
     })
   );
 

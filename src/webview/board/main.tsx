@@ -3,6 +3,12 @@ import { createRoot } from "react-dom/client";
 import { makeTranslator, resolveLocale, type Dictionary } from "../i18n";
 import "./board.css";
 
+interface BoardTerminal {
+  id: string;
+  label: string;
+  childTitle?: string;
+}
+
 interface BoardCard {
   id: string;
   title: string;
@@ -15,6 +21,7 @@ interface BoardCard {
   reviewVerdictSource?: string;
   hasChildren: boolean;
   hasLinkedPlan: boolean;
+  terminals: BoardTerminal[];
   updatedAt: string;
 }
 
@@ -64,7 +71,10 @@ type BoardKey =
   | "correctionFrom"
   | "hasPlan"
   | "hasChildren"
-  | "dropHere";
+  | "dropHere"
+  | "revealTerminal"
+  | "killTerminal"
+  | "childTerminal";
 
 const DICT: Dictionary<BoardKey> = {
   search: { en: "Search task...", "pt-br": "Buscar tarefa..." },
@@ -95,6 +105,9 @@ const DICT: Dictionary<BoardKey> = {
   hasPlan: { en: "Linked plan", "pt-br": "Plano vinculado" },
   hasChildren: { en: "Has child prompts", "pt-br": "Tem prompts filhos" },
   dropHere: { en: "Drop a card here", "pt-br": "Solte um cartão aqui" },
+  revealTerminal: { en: "Show terminal", "pt-br": "Mostrar terminal" },
+  killTerminal: { en: "Kill terminal", "pt-br": "Encerrar terminal" },
+  childTerminal: { en: "Child prompt terminal: {0}", "pt-br": "Terminal do prompt filho: {0}" },
 };
 
 const t = makeTranslator(DICT, resolveLocale(host.__SOBEK_STATE__?.language));
@@ -150,6 +163,33 @@ function Card({ card }: { card: BoardCard }) {
         {card.hasLinkedPlan && <span className="badge" title={t("hasPlan")}>📄</span>}
         {card.hasChildren && <span className="badge" title={t("hasChildren")}>⑂</span>}
       </div>
+      {card.terminals.length > 0 && (
+        <div className="card-terminals">
+          {card.terminals.map((term) => (
+            <span key={term.id} className={`term-chip${term.childTitle ? " term-child" : ""}`}>
+              <button
+                className="term-open"
+                title={
+                  term.childTitle ? t("childTerminal", term.childTitle) : t("revealTerminal")
+                }
+                onClick={() =>
+                  vscode.postMessage({ type: "revealTerminal", terminalId: term.id })
+                }
+              >
+                ❯_ {term.label}
+                {term.childTitle ? " ⑂" : ""}
+              </button>
+              <button
+                className="term-kill"
+                title={t("killTerminal")}
+                onClick={() => vscode.postMessage({ type: "killTerminal", terminalId: term.id })}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <div className="card-actions">
         <button onClick={() => vscode.postMessage({ type: "run", promptId: card.id })}>
           {t("run")}

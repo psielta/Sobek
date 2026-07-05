@@ -36,6 +36,7 @@ The project ports the **core** of [Thoth](https://github.com/psielta/gerenciamen
 ### 📋 Workflow kanban
 - Every root prompt is a task with a **10-phase workflow** (Prompt engineering → Planning → Plan review → ... → Commit/Merge), its own phase snapshot, a current owner (You/Claude/Codex/Grok) and an append-only timeline. Default phase names follow the VS Code display language.
 - React webview board with **drag-and-drop** between phases, kanban/vertical modes, text/status/workflow filters and card actions (run, generate child, advance, note, archive).
+- Cards show the task's **active terminals** (child prompt terminals included) as live chips — click to reveal the terminal, ✕ to kill it.
 - **Automatic transitions**: creating a templated child prompt moves the parent to the matching phase; re-reviews increment the iteration (`re-review #2`); review verdicts move the task to the correction phase.
 
 ### 🖥️ Per-prompt terminals

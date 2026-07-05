@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { Prompt } from "../core/prompt";
+import { newId } from "../lib/ids";
 import type { PromptStore } from "../store/prompt-store";
 import { findPhaseByRole, setPhase } from "../core/workflow";
 import {
@@ -90,6 +91,8 @@ function waitForShellReady(terminal: vscode.Terminal): Promise<void> {
 }
 
 export interface ManagedTerminal {
+  /** Stable identifier, safe to hand to webviews (Terminal has no id). */
+  id: string;
   terminal: vscode.Terminal;
   promptId?: string;
   agent?: AgentKind;
@@ -135,6 +138,10 @@ export class TerminalManager {
 
   list(): ManagedTerminal[] {
     return [...this.managed].sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  findById(id: string): ManagedTerminal | undefined {
+    return [...this.managed].find((entry) => entry.id === id);
   }
 
   countFor(promptId: string): number {
@@ -186,7 +193,7 @@ export class TerminalManager {
       iconPath: new vscode.ThemeIcon(agent ? "robot" : "terminal"),
       location,
     });
-    this.managed.add({ terminal, promptId: prompt?.id, agent, createdAt: Date.now() });
+    this.managed.add({ id: newId(), terminal, promptId: prompt?.id, agent, createdAt: Date.now() });
     this.changeEmitter.fire();
     terminal.show();
 

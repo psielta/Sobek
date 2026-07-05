@@ -9,7 +9,17 @@ import {
   setPhase,
 } from "../core/workflow";
 import { buildWebviewHtml } from "../lib/webview-html";
+import { AGENT_TAB_DEFAULTS } from "../terminals/agents";
+import type { TerminalManager } from "../terminals/manager";
 import { workflowActorLabel } from "./labels";
+
+/** Live terminal shown on a board card (grouped under the ROOT prompt). */
+export interface BoardTerminal {
+  id: string;
+  label: string;
+  /** Child prompt title when the terminal belongs to a child. */
+  childTitle?: string;
+}
 
 export interface BoardCard {
   id: string;
@@ -23,6 +33,7 @@ export interface BoardCard {
   reviewVerdictSource?: string;
   hasChildren: boolean;
   hasLinkedPlan: boolean;
+  terminals: BoardTerminal[];
   updatedAt: string;
 }
 
@@ -37,7 +48,7 @@ export interface BoardColumn {
 const NO_WORKFLOW_COLUMN = "__none__";
 const DONE_COLUMN = "__done__";
 
-function toCard(prompt: Prompt): BoardCard {
+function toCard(prompt: Prompt, terminals: BoardTerminal[]): BoardCard {
   const workflow = prompt.workflow;
   return {
     id: prompt.id,
@@ -51,8 +62,38 @@ function toCard(prompt: Prompt): BoardCard {
     reviewVerdictSource: workflow?.reviewVerdictSourcePhaseName,
     hasChildren: false,
     hasLinkedPlan: !!prompt.linkedPlan,
+    terminals,
     updatedAt: prompt.updatedAt,
   };
+}
+
+/**
+ * Live terminals grouped by ROOT prompt — the same rule as the Terminals
+ * view: a child prompt's terminal shows up on the parent's card.
+ */
+function terminalsByRootPrompt(
+  store: PromptStore,
+  manager: TerminalManager | undefined
+): Map<string, BoardTerminal[]> {
+  const byRoot = new Map<string, BoardTerminal[]>();
+  for (const entry of manager?.list() ?? []) {
+    if (!entry.promptId) {
+      continue;
+    }
+    const owner = store.get(entry.promptId);
+    if (!owner) {
+      continue;
+    }
+    const rootId = owner.parentPromptId ?? owner.id;
+    const list = byRoot.get(rootId) ?? [];
+    list.push({
+      id: entry.id,
+      label: entry.agent ? AGENT_TAB_DEFAULTS[entry.agent].name : "Terminal",
+      childTitle: owner.parentPromptId ? owner.title || vscode.l10n.t("(untitled)") : undefined,
+    });
+    byRoot.set(rootId, list);
+  }
+  return byRoot;
 }
 
 /**
@@ -60,9 +101,16 @@ function toCard(prompt: Prompt): BoardCard {
  * target), one column per phase of the global template, extra columns for
  * active phases outside the template, then "Concluídas".
  */
-export function buildBoardColumns(store: PromptStore): BoardColumn[] {
+export function buildBoardColumns(
+  store: PromptStore,
+  terminals?: TerminalManager
+): BoardColumn[] {
   const roots = store.listRoots();
-  const cards = roots.map((prompt) => ({ prompt, card: toCard(prompt) }));
+  const terminalMap = terminalsByRootPrompt(store, terminals);
+  const cards = roots.map((prompt) => ({
+    prompt,
+    card: toCard(prompt, terminalMap.get(prompt.id) ?? []),
+  }));
   for (const entry of cards) {
     entry.card.hasChildren = store.listChildren(entry.prompt.id).length > 0;
   }
@@ -131,7 +179,11 @@ export class BoardPanel {
   private static current: BoardPanel | undefined;
   private readonly disposables: vscode.Disposable[] = [];
 
-  static show(context: vscode.ExtensionContext, store: PromptStore): void {
+  static show(
+    context: vscode.ExtensionContext,
+    store: PromptStore,
+    terminals?: TerminalManager
+  ): void {
     if (BoardPanel.current) {
       BoardPanel.current.panel.reveal();
       return;
@@ -142,13 +194,14 @@ export class BoardPanel {
       vscode.ViewColumn.One,
       { enableScripts: true, retainContextWhenHidden: true }
     );
-    BoardPanel.current = new BoardPanel(panel, context, store);
+    BoardPanel.current = new BoardPanel(panel, context, store, terminals);
   }
 
   private constructor(
     private readonly panel: vscode.WebviewPanel,
     context: vscode.ExtensionContext,
-    private readonly store: PromptStore
+    private readonly store: PromptStore,
+    private readonly terminals?: TerminalManager
   ) {
     // Webview tab icons are not theme-masked like activity bar icons, so the
     // panel needs explicit light/dark variants.
@@ -161,7 +214,7 @@ export class BoardPanel {
       extensionUri: context.extensionUri,
       entry: "board",
       title: "Sobek: Board",
-      initialState: { columns: buildBoardColumns(store), language: vscode.env.language },
+      initialState: { columns: buildBoardColumns(store, terminals), language: vscode.env.language },
     });
 
     this.disposables.push(
@@ -169,12 +222,15 @@ export class BoardPanel {
       panel.webview.onDidReceiveMessage((message) => void this.handleMessage(message)),
       panel.onDidDispose(() => this.dispose())
     );
+    if (terminals) {
+      this.disposables.push(terminals.onDidChange(() => this.postState()));
+    }
   }
 
   private postState(): void {
     void this.panel.webview.postMessage({
       type: "state",
-      columns: buildBoardColumns(this.store),
+      columns: buildBoardColumns(this.store, this.terminals),
     });
   }
 
@@ -183,11 +239,18 @@ export class BoardPanel {
     promptId?: string;
     columnId?: string;
     note?: string;
+    terminalId?: string;
   }): Promise<void> {
     try {
       switch (message.type) {
         case "ready":
           this.postState();
+          break;
+        case "revealTerminal":
+          this.terminals?.findById(message.terminalId!)?.terminal.show();
+          break;
+        case "killTerminal":
+          this.terminals?.findById(message.terminalId!)?.terminal.dispose();
           break;
         case "openPrompt":
           await vscode.commands.executeCommand("sobek.openPrompt", message.promptId);

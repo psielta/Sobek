@@ -36,6 +36,7 @@ O projeto porta o **core** do [Thoth](https://github.com/psielta/gerenciamento-d
 ### 📋 Kanban de workflow
 - Cada prompt raiz é uma tarefa com **workflow de 10 fases** (Engenharia de prompt → Planejamento → Revisão do plano → ... → Commit/Merge), snapshot próprio de fases, responsável atual (Você/Claude/Codex/Grok) e timeline append-only. Os nomes padrão das fases seguem o idioma do VS Code.
 - Board em webview React com **drag-and-drop** entre fases, modos kanban/vertical, filtros por texto/status/fluxo e ações no cartão (executar, gerar filho, avançar, nota, arquivar).
+- Os cartões mostram os **terminais ativos** da tarefa (incluindo os de prompts filhos) como chips ao vivo — clique para revelar o terminal, ✕ para encerrá-lo.
 - **Transições automáticas**: criar um prompt filho de template move o pai para a fase correspondente; re-reviews incrementam a iteração (`re-review #2`); vereditos de revisão movem a tarefa para a fase de correção.
 
 ### 🖥️ Terminais por prompt
