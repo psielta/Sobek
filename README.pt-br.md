@@ -28,6 +28,7 @@ O projeto porta o **core** do [Thoth](https://github.com/psielta/gerenciamento-d
 
 ### 🌱 Prompts filhos gerados por template
 - Vincule um **plano Markdown** (ex.: plano gerado pelo Claude Code em plan-mode) a um prompt raiz — de qualquer diretório do disco.
+- Planos vinculados são **monitorados e versionados**: cada mudança no arquivo do plano vira uma versão imutável. Abra o plano a partir do prompt, navegue pelo histórico de versões, compare qualquer versão com a anterior ou com o arquivo atual (diff nativo do VS Code) e pause/retome o monitoramento por prompt — prompts arquivados param de monitorar automaticamente.
 - Gere prompts auxiliares a partir de **9 templates** portados do Thoth: revisar plano (com ou sem o prompt pai como contexto), re-review, implementar (inclusive em worktree), revisar PR, re-review de PR com a resposta do Codex, rebase e merge.
 - Referências de PR são resolvidas em cascata (input → PR salva no plano) e persistidas para a próxima geração.
 - **Templates personalizados por workspace**: crie os seus em `.sobek/templates/<slug>.md` (o comando *Criar template personalizado* gera o esqueleto). Frontmatter define nome, agente alvo, `targetPhaseRole` opcional (avanço automático da fase do pai) e inputs próprios; o corpo usa os placeholders `{AbsolutePath}`, `{DisplayName}`, `{ParentPromptContent}`, `{PullRequestReference}` e `{input:chave}`. Os arquivos recarregam ao salvar e são versionáveis no git.
@@ -65,6 +66,7 @@ O projeto porta o **core** do [Thoth](https://github.com/psielta/gerenciamento-d
       meta.json                Metadados, workflow (fases, timeline) e menções
       prompt.md                Conteúdo Markdown (edite no próprio VS Code)
       versions.json            Snapshots imutáveis de cada versão
+      plan-versions.json       Snapshots do plano vinculado (capturados pelo watcher)
 ```
 
 Sem serviços externos além da Gemini API (opcional). O diretório `.sobek/` pode ser commitado para compartilhar as tarefas com o time — ou ignorado, se preferir prompts locais.
@@ -127,7 +129,6 @@ Para usar a IA: `Ctrl+Shift+P` → **Sobek: Configurar chave Gemini** (obtenha a
 
 ## Roadmap
 
-- Watcher do plano vinculado com versionamento automático (paridade com os *linked documents* do Thoth).
 - Timeline visual da tarefa em webview.
 - Numeração de tarefas configurável (`TaskNumberPattern`).
 

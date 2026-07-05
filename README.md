@@ -28,6 +28,7 @@ The project ports the **core** of [Thoth](https://github.com/psielta/gerenciamen
 
 ### 🌱 Template-generated child prompts
 - Link a **Markdown plan** (e.g. a plan produced by Claude Code in plan mode) to a root prompt — from anywhere on disk.
+- Linked plans are **watched and versioned**: every change to the plan file is captured as an immutable version. Open the plan from the prompt, browse the version history, diff any version against the previous one or the current file (VS Code's native diff), and pause/resume monitoring per prompt — archived prompts stop monitoring automatically.
 - Generate auxiliary prompts from **9 templates** ported from Thoth: review plan (with or without the parent prompt as context), re-review, implement (including in a worktree), review PR, re-review PR with Codex's response, rebase and merge.
 - PR references resolve in a cascade (input → PR stored on the plan) and persist for the next generation.
 - **Workspace-defined custom templates**: author your own in `.sobek/templates/<slug>.md` (the *Create Custom Child Template* command scaffolds one). Frontmatter defines name, target agent, an optional `targetPhaseRole` (automatic parent phase advance) and custom inputs; the body uses the `{AbsolutePath}`, `{DisplayName}`, `{ParentPromptContent}`, `{PullRequestReference}` and `{input:key}` placeholders. Files hot-reload on save and are git-versionable.
@@ -65,6 +66,7 @@ The project ports the **core** of [Thoth](https://github.com/psielta/gerenciamen
       meta.json                Metadata, workflow (phases, timeline) and mentions
       prompt.md                Markdown content (edit it right in VS Code)
       versions.json            Immutable snapshots of every version
+      plan-versions.json       Linked plan content snapshots (watcher-captured)
 ```
 
 No external services beyond the (optional) Gemini API. The `.sobek/` directory can be committed to share tasks with your team — or ignored for local-only prompts.
@@ -127,7 +129,6 @@ To use the AI: `Ctrl+Shift+P` → **Sobek: Set Gemini API Key** (get one at [ais
 
 ## Roadmap
 
-- Linked plan watcher with automatic versioning (parity with Thoth's linked documents).
 - Visual task timeline webview.
 - Configurable task numbering (`TaskNumberPattern`).
 

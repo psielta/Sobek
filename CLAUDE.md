@@ -16,7 +16,8 @@ Sobek é uma extensão VS Code (TypeScript + esbuild + React nos webviews) que p
 
 - Tree view lista apenas prompts pai; filho abre preview somente leitura, nunca edição.
 - Filho criado com `sourceTemplateKey` avança o workflow do pai (mapa template→fase em `src/core/templates.ts`; templates personalizados do workspace em `.sobek/templates/*.md` com chave `custom:<slug>`, parser em `src/core/custom-templates.ts`).
-- Concluir workflow não arquiva o prompt; arquivar mata os terminais do prompt.
+- Concluir workflow não arquiva o prompt; arquivar mata os terminais do prompt e para o monitoramento do plano vinculado.
+- Plano vinculado mantém histórico versionado (`plan-versions.json`, watcher em `src/store/plan-watcher.ts`); pause/resume por prompt via `linkedPlan.monitoringPaused`.
 - Menções `@arquivo` validadas contra o workspace (sem absoluto, sem `..`).
 - Módulos puros (`src/core/`, `src/terminals/agents.ts`, `src/ai/instructions.ts`, `src/ai/gemini-client.ts`) não importam `vscode`.
 - Chave Gemini apenas em SecretStorage.
