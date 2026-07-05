@@ -47,15 +47,26 @@ export interface PromptVersion {
 }
 
 /**
- * Minimal stand-in for Thoth's LinkedDocument: a Markdown plan (typically
- * written by an agent) that child prompts are generated from. Sobek keeps the
- * pointer and PR reference, without background watchers.
+ * Sobek's counterpart of Thoth's LinkedDocument: a Markdown plan (typically
+ * written by an agent) that child prompts are generated from. The plan file is
+ * watched while the prompt is active, snapshotting a version on every change.
  */
 export interface LinkedPlan {
   /** Workspace-relative or absolute path — plans may live outside the repo. */
   path: string;
   displayName: string;
   pullRequestReference?: string;
+  /** When true the watcher stops capturing versions until resumed. */
+  monitoringPaused?: boolean;
+}
+
+/** Immutable snapshot of the linked plan's content (Thoth's LinkedDocumentVersion). */
+export interface LinkedPlanVersion {
+  versionNumber: number;
+  content: string;
+  capturedAt: string;
+  /** What produced the snapshot: linking the plan, the file watcher or the user. */
+  origin: "Linked" | "Watcher" | "Manual";
 }
 
 export interface Prompt {

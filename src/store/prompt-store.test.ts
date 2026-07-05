@@ -197,3 +197,62 @@ describe("linked plan", () => {
     expect(fresh.require(prompt.id).linkedPlan?.path).toBe("docs/legado.md");
   });
 });
+
+describe("linked plan versions", () => {
+  async function linkPlan(content = "# v1"): Promise<string> {
+    await fs.mkdir(path.join(root, "docs"), { recursive: true });
+    await fs.writeFile(path.join(root, "docs", "plan.md"), content, "utf8");
+    const prompt = await store.create({ title: "T", content: "" });
+    await store.setLinkedPlan(prompt.id, { path: "docs/plan.md", displayName: "plan.md" });
+    return prompt.id;
+  }
+
+  it("captures version 1 when the plan is linked", async () => {
+    const id = await linkPlan("# v1");
+    const versions = await store.getPlanVersions(id);
+    expect(versions).toHaveLength(1);
+    expect(versions[0]).toMatchObject({ versionNumber: 1, content: "# v1", origin: "Linked" });
+  });
+
+  it("skips capture when the content is unchanged and appends when it changes", async () => {
+    const id = await linkPlan("# v1");
+    expect(await store.capturePlanVersion(id, "Watcher")).toBeUndefined();
+    await fs.writeFile(path.join(root, "docs", "plan.md"), "# v2", "utf8");
+    const captured = await store.capturePlanVersion(id, "Watcher");
+    expect(captured).toMatchObject({ versionNumber: 2, content: "# v2", origin: "Watcher" });
+    expect(await store.getPlanVersions(id)).toHaveLength(2);
+  });
+
+  it("returns undefined when the plan file is missing", async () => {
+    const id = await linkPlan();
+    await fs.rm(path.join(root, "docs", "plan.md"));
+    expect(await store.capturePlanVersion(id, "Manual")).toBeUndefined();
+  });
+
+  it("resets the history when linking a different file and clears it on unlink", async () => {
+    const id = await linkPlan("# v1");
+    await fs.writeFile(path.join(root, "docs", "outro.md"), "# outro", "utf8");
+    await store.setLinkedPlan(id, { path: "docs/outro.md", displayName: "outro.md" });
+    const versions = await store.getPlanVersions(id);
+    expect(versions).toHaveLength(1);
+    expect(versions[0]).toMatchObject({ versionNumber: 1, content: "# outro" });
+    await store.setLinkedPlan(id, undefined);
+    expect(await store.getPlanVersions(id)).toHaveLength(0);
+  });
+
+  it("keeps the history when re-linking the same path", async () => {
+    const id = await linkPlan("# v1");
+    await fs.writeFile(path.join(root, "docs", "plan.md"), "# v2", "utf8");
+    await store.capturePlanVersion(id, "Watcher");
+    await store.setLinkedPlan(id, { path: "docs/plan.md", displayName: "plan.md" });
+    expect(await store.getPlanVersions(id)).toHaveLength(2);
+  });
+
+  it("persists the monitoring pause flag", async () => {
+    const id = await linkPlan();
+    await store.setPlanMonitoringPaused(id, true);
+    expect(store.require(id).linkedPlan?.monitoringPaused).toBe(true);
+    await store.setPlanMonitoringPaused(id, false);
+    expect(store.require(id).linkedPlan?.monitoringPaused).toBeUndefined();
+  });
+});

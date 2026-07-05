@@ -7,6 +7,7 @@
  *   prompts/<id>/meta.json        — prompt metadata, workflow snapshot and timeline
  *   prompts/<id>/prompt.md        — current Markdown content
  *   prompts/<id>/versions.json    — immutable version snapshots
+ *   prompts/<id>/plan-versions.json — linked plan content snapshots
  */
 
 import * as fs from "node:fs/promises";
@@ -20,6 +21,7 @@ import { parseMentions, resolveMentionPath } from "../core/mentions";
 import type {
   FileReference,
   LinkedPlan,
+  LinkedPlanVersion,
   Prompt,
   PromptKind,
   PromptStatus,
@@ -424,9 +426,84 @@ export class PromptStore {
     return prompt;
   }
 
+  /** Absolute filesystem path of a linked plan (paths may be workspace-relative). */
+  resolvePlanPath(plan: LinkedPlan): string {
+    return path.resolve(this.workspaceRoot, plan.path);
+  }
+
+  private planVersionsPath(id: string): string {
+    return path.join(this.promptDir(id), "plan-versions.json");
+  }
+
+  async getPlanVersions(id: string): Promise<LinkedPlanVersion[]> {
+    this.require(id);
+    return (await readJsonFile<LinkedPlanVersion[]>(this.planVersionsPath(id))) ?? [];
+  }
+
+  /**
+   * Snapshots the linked plan's current on-disk content, exactly like Thoth's
+   * linked document versions: no-op (returns undefined) when the prompt has no
+   * plan, the file is unreadable, or the content matches the latest version.
+   */
+  async capturePlanVersion(
+    id: string,
+    origin: LinkedPlanVersion["origin"]
+  ): Promise<LinkedPlanVersion | undefined> {
+    const prompt = this.require(id);
+    if (!prompt.linkedPlan) {
+      return undefined;
+    }
+    const content = await readTextFile(this.resolvePlanPath(prompt.linkedPlan));
+    if (content === undefined) {
+      return undefined;
+    }
+    const versions = await this.getPlanVersions(id);
+    if (versions.at(-1)?.content === content) {
+      return undefined;
+    }
+    const version: LinkedPlanVersion = {
+      versionNumber: (versions.at(-1)?.versionNumber ?? 0) + 1,
+      content,
+      capturedAt: new Date().toISOString(),
+      origin,
+    };
+    versions.push(version);
+    await writeJsonFile(this.planVersionsPath(id), versions);
+    this.notify();
+    return version;
+  }
+
+  /**
+   * Links/unlinks the plan. Pointing at a different file resets the version
+   * history and captures the plan's current content as version 1; unlinking
+   * discards the history.
+   */
   async setLinkedPlan(id: string, plan: LinkedPlan | undefined): Promise<Prompt> {
     const prompt = this.require(id);
+    const previousPath = prompt.linkedPlan
+      ? this.resolvePlanPath(prompt.linkedPlan)
+      : undefined;
     prompt.linkedPlan = plan;
+    prompt.updatedAt = new Date().toISOString();
+    await this.persist(prompt);
+    const newPath = plan ? this.resolvePlanPath(plan) : undefined;
+    if (newPath !== previousPath) {
+      await fs.rm(this.planVersionsPath(id), { force: true });
+      if (plan) {
+        await this.capturePlanVersion(id, "Linked");
+      }
+    }
+    this.notify();
+    return prompt;
+  }
+
+  /** Pauses/resumes plan version capturing (Thoth's monitoring pause/resume). */
+  async setPlanMonitoringPaused(id: string, paused: boolean): Promise<Prompt> {
+    const prompt = this.require(id);
+    if (!prompt.linkedPlan) {
+      throw new Error("O prompt não tem plano vinculado.");
+    }
+    prompt.linkedPlan = { ...prompt.linkedPlan, monitoringPaused: paused || undefined };
     prompt.updatedAt = new Date().toISOString();
     await this.persist(prompt);
     this.notify();
