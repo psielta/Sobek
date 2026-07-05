@@ -2,7 +2,7 @@
   "name": "sobek",
   "displayName": "Sobek",
   "description": "%ext.description%",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "psielta",
   "license": "MIT",
   "repository": {
