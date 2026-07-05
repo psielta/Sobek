@@ -27,7 +27,7 @@ export class ChildPromptPreviewProvider implements vscode.TextDocumentContentPro
     const promptId = uri.path.replace(/^\//, "").split("/")[0];
     const prompt = this.store.get(promptId);
     if (!prompt) {
-      return "Prompt filho não encontrado.";
+      return vscode.l10n.t("Child prompt not found.");
     }
     return prompt.content;
   }

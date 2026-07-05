@@ -41,6 +41,44 @@ const PHASE_ROLES: WorkflowPhaseRole[] = [
   "Merge",
 ];
 
+/**
+ * Parse errors are user-facing; this module cannot import `vscode`, so the
+ * caller passes the VS Code display language (same pattern as
+ * `defaultPhaseTemplateForLocale`).
+ */
+interface ParseMessages {
+  missingFrontmatter: string;
+  emptyBody: string;
+  invalidTargetAgent: (value: string) => string;
+  invalidKind: (value: string) => string;
+  invalidPhaseRole: (value: string) => string;
+}
+
+const PARSE_MESSAGES: Record<"en" | "pt-br", ParseMessages> = {
+  en: {
+    missingFrontmatter: "Frontmatter missing: the file must start with a --- block.",
+    emptyBody: "The template body (after the frontmatter) is empty.",
+    invalidTargetAgent: (value: string) =>
+      `Invalid targetAgent: "${value}" (use ClaudeCode, Codex or Grok).`,
+    invalidKind: (value: string) => `Invalid kind: "${value}" (use General or Planning).`,
+    invalidPhaseRole: (value: string) =>
+      `Invalid targetPhaseRole: "${value}" (values: ${PHASE_ROLES.join(", ")}).`,
+  },
+  "pt-br": {
+    missingFrontmatter: "Frontmatter ausente: o arquivo deve começar com um bloco ---.",
+    emptyBody: "O corpo do template (após o frontmatter) está vazio.",
+    invalidTargetAgent: (value: string) =>
+      `targetAgent inválido: "${value}" (use ClaudeCode, Codex ou Grok).`,
+    invalidKind: (value: string) => `kind inválido: "${value}" (use General ou Planning).`,
+    invalidPhaseRole: (value: string) =>
+      `targetPhaseRole inválido: "${value}" (valores: ${PHASE_ROLES.join(", ")}).`,
+  },
+};
+
+function parseMessagesFor(language: string | undefined): ParseMessages {
+  return language?.toLowerCase().startsWith("pt") ? PARSE_MESSAGES["pt-br"] : PARSE_MESSAGES.en;
+}
+
 interface Frontmatter {
   scalars: Record<string, string>;
   inputs: Array<Record<string, string>>;
@@ -113,42 +151,39 @@ export function substitutePlaceholders(template: string, context: PromptTemplate
     .replace(/\{input:([\w-]+)\}/g, (_match, key: string) => context.inputs[key] ?? "");
 }
 
-export function parseCustomTemplate(slug: string, fileContent: string): ParseCustomTemplateResult {
+export function parseCustomTemplate(
+  slug: string,
+  fileContent: string,
+  language?: string
+): ParseCustomTemplateResult {
+  const messages = parseMessagesFor(language);
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(fileContent);
   if (!match) {
-    return {
-      error: { slug, message: "Frontmatter ausente: o arquivo deve começar com um bloco ---." },
-    };
+    return { error: { slug, message: messages.missingFrontmatter } };
   }
   const { scalars, inputs } = parseFrontmatter(match[1]);
   const body = match[2].trim();
   if (!body) {
-    return { error: { slug, message: "O corpo do template (após o frontmatter) está vazio." } };
+    return { error: { slug, message: messages.emptyBody } };
   }
 
   const targetAgent = (scalars.targetAgent ?? "ClaudeCode") as TargetAgent;
   if (!TARGET_AGENTS.includes(targetAgent)) {
     return {
-      error: {
-        slug,
-        message: `targetAgent inválido: "${scalars.targetAgent}" (use ClaudeCode, Codex ou Grok).`,
-      },
+      error: { slug, message: messages.invalidTargetAgent(scalars.targetAgent ?? "") },
     };
   }
   const kind = (scalars.kind ?? "General") as PromptKind;
   if (!KINDS.includes(kind)) {
     return {
-      error: { slug, message: `kind inválido: "${scalars.kind}" (use General ou Planning).` },
+      error: { slug, message: messages.invalidKind(scalars.kind ?? "") },
     };
   }
   let targetPhaseRole: WorkflowPhaseRole | undefined;
   if (scalars.targetPhaseRole) {
     if (!PHASE_ROLES.includes(scalars.targetPhaseRole as WorkflowPhaseRole)) {
       return {
-        error: {
-          slug,
-          message: `targetPhaseRole inválido: "${scalars.targetPhaseRole}" (valores: ${PHASE_ROLES.join(", ")}).`,
-        },
+        error: { slug, message: messages.invalidPhaseRole(scalars.targetPhaseRole) },
       };
     }
     targetPhaseRole = scalars.targetPhaseRole as WorkflowPhaseRole;

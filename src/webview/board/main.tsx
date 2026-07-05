@@ -21,6 +21,7 @@ interface BoardCard {
   reviewVerdictSource?: string;
   hasChildren: boolean;
   hasLinkedPlan: boolean;
+  actorIsHuman: boolean;
   terminals: BoardTerminal[];
   updatedAt: string;
 }
@@ -134,7 +135,7 @@ function matches(card: BoardCard, query: string, status: StatusFilter, flow: Wor
 function Card({ card }: { card: BoardCard }) {
   return (
     <div
-      className={`card${card.actorLabel === "Você" ? " card-human" : ""}`}
+      className={`card${card.actorIsHuman ? " card-human" : ""}`}
       style={{ borderLeftColor: card.phaseColor ?? "var(--vscode-panel-border)" }}
       draggable
       onDragStart={(event) => {

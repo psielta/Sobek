@@ -82,7 +82,8 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
 
   const store = new PromptStore(
     workspaceRoot,
-    defaultPhaseTemplateForLocale(vscode.env.language)
+    defaultPhaseTemplateForLocale(vscode.env.language),
+    vscode.env.language
   );
   await store.load();
 

@@ -256,30 +256,33 @@ export function registerGenerateChildCommands(
         .slice(0, 48) || "template";
       const filePath = store.customTemplatePath(slug);
       if (!fs.existsSync(filePath)) {
+        // The scaffold follows the VS Code display language, like the rest of
+        // the UI (only the frontmatter keys/enums are fixed identifiers).
+        const exampleInputKey = vscode.l10n.t("scope");
         const skeleton = [
           "---",
           `name: ${name.trim()}`,
-          "description: Descreva quando usar este template",
+          `description: ${vscode.l10n.t("Describe when to use this template")}`,
           "targetAgent: ClaudeCode   # ClaudeCode | Codex | Grok",
           "kind: General             # General | Planning",
-          "# targetPhaseRole: CodeReview   # opcional — avança a fase do pai (PromptEngineering, Planning, PlanReview, PlanCorrection, Implementation, CodeReview, ReviewCorrection, PracticalTest, Rebase, Merge)",
+          `# targetPhaseRole: CodeReview   # ${vscode.l10n.t("optional — advances the parent's phase")} (PromptEngineering, Planning, PlanReview, PlanCorrection, Implementation, CodeReview, ReviewCorrection, PracticalTest, Rebase, Merge)`,
           "# isReReview: false",
           `title: "${name.trim()}: {DisplayName}"`,
           "# inputs:",
-          "#   - key: escopo",
-          "#     label: Escopo",
-          "#     placeholder: descreva o escopo",
+          `#   - key: ${exampleInputKey}`,
+          `#     label: ${vscode.l10n.t("Scope")}`,
+          `#     placeholder: ${vscode.l10n.t("describe the scope")}`,
           "#     required: true",
           "#     multiline: false",
           "---",
-          `Escreva aqui o conteúdo do prompt filho.`,
+          vscode.l10n.t("Write the child prompt content here."),
           "",
-          "Placeholders disponíveis:",
-          '- {AbsolutePath} — caminho absoluto do plano vinculado',
-          "- {DisplayName} — nome do plano",
-          "- {ParentPromptContent} — conteúdo do prompt pai",
-          "- {PullRequestReference} — referência de PR (usar torna a PR obrigatória)",
-          "- {input:escopo} — valor de um input declarado no frontmatter",
+          vscode.l10n.t("Available placeholders:"),
+          `- {AbsolutePath} — ${vscode.l10n.t("absolute path of the linked plan")}`,
+          `- {DisplayName} — ${vscode.l10n.t("plan name")}`,
+          `- {ParentPromptContent} — ${vscode.l10n.t("parent prompt content")}`,
+          `- {PullRequestReference} — ${vscode.l10n.t("PR reference (using it makes the PR required)")}`,
+          `- {input:${exampleInputKey}} — ${vscode.l10n.t("value of an input declared in the frontmatter")}`,
           "",
         ].join("\n");
         await fs.promises.mkdir(store.templatesDir, { recursive: true });

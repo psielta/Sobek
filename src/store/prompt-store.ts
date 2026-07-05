@@ -81,7 +81,9 @@ export class PromptStore {
   constructor(
     private readonly workspaceRoot: string,
     /** Default phase template for new settings (localized by the caller). */
-    private readonly defaultPhaseTemplate: PhaseTemplate[] = DEFAULT_PHASE_TEMPLATE
+    private readonly defaultPhaseTemplate: PhaseTemplate[] = DEFAULT_PHASE_TEMPLATE,
+    /** VS Code display language; localizes template parse errors. */
+    private readonly language?: string
   ) {}
 
   get root(): string {
@@ -179,7 +181,7 @@ export class PromptStore {
       if (content === undefined) {
         continue;
       }
-      const result = parseCustomTemplate(slug, content);
+      const result = parseCustomTemplate(slug, content, this.language);
       if (result.definition) {
         templates.push(result.definition);
       } else {

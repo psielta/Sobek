@@ -33,6 +33,8 @@ export interface BoardCard {
   reviewVerdictSource?: string;
   hasChildren: boolean;
   hasLinkedPlan: boolean;
+  /** Locale-independent flag (the label varies with the display language). */
+  actorIsHuman: boolean;
   terminals: BoardTerminal[];
   updatedAt: string;
 }
@@ -62,6 +64,7 @@ function toCard(prompt: Prompt, terminals: BoardTerminal[]): BoardCard {
     reviewVerdictSource: workflow?.reviewVerdictSourcePhaseName,
     hasChildren: false,
     hasLinkedPlan: !!prompt.linkedPlan,
+    actorIsHuman: workflow?.currentActor === "Human",
     terminals,
     updatedAt: prompt.updatedAt,
   };

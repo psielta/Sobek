@@ -74,14 +74,22 @@ describe("parseCustomTemplate", () => {
   });
 
   it("rejects missing frontmatter, empty body and invalid enums", () => {
-    expect(parseCustomTemplate("a", "sem frontmatter").error?.message).toMatch(/Frontmatter/);
-    expect(parseCustomTemplate("b", "---\nname: X\n---\n").error?.message).toMatch(/vazio/);
+    expect(parseCustomTemplate("a", "sem frontmatter").error?.message).toMatch(/[Ff]rontmatter/);
+    expect(parseCustomTemplate("b", "---\nname: X\n---\n").error?.message).toMatch(/empty/);
     expect(
       parseCustomTemplate("c", "---\nname: X\ntargetAgent: Gemini\n---\ncorpo").error?.message
     ).toMatch(/targetAgent/);
     expect(
       parseCustomTemplate("d", "---\nname: X\ntargetPhaseRole: Nope\n---\ncorpo").error?.message
     ).toMatch(/targetPhaseRole/);
+  });
+
+  it("localizes parse errors to the caller's display language", () => {
+    expect(parseCustomTemplate("a", "sem frontmatter", "pt-BR").error?.message).toMatch(/ausente/);
+    expect(parseCustomTemplate("b", "---\nname: X\n---\n", "pt-BR").error?.message).toMatch(
+      /vazio/
+    );
+    expect(parseCustomTemplate("c", "---\nname: X\n---\n", "en").error?.message).toMatch(/empty/);
   });
 
   it("strips inline comments from bare values but keeps quoted ones", () => {
