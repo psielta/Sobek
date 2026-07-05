@@ -161,6 +161,33 @@
         "category": "Sobek"
       },
       {
+        "command": "sobek.openLinkedPlan",
+        "title": "%cmd.openLinkedPlan%",
+        "category": "Sobek",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "sobek.planVersionHistory",
+        "title": "%cmd.planVersionHistory%",
+        "category": "Sobek",
+        "icon": "$(history)"
+      },
+      {
+        "command": "sobek.capturePlanVersion",
+        "title": "%cmd.capturePlanVersion%",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.pausePlanMonitoring",
+        "title": "%cmd.pausePlanMonitoring%",
+        "category": "Sobek"
+      },
+      {
+        "command": "sobek.resumePlanMonitoring",
+        "title": "%cmd.resumePlanMonitoring%",
+        "category": "Sobek"
+      },
+      {
         "command": "sobek.createChildTemplate",
         "title": "%cmd.createChildTemplate%",
         "category": "Sobek",
@@ -317,6 +344,11 @@
           "group": "inline@4"
         },
         {
+          "command": "sobek.openLinkedPlan",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt-plan/",
+          "group": "inline@4"
+        },
+        {
           "command": "sobek.archivePrompt",
           "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "inline@5"
@@ -332,19 +364,44 @@
           "group": "0_generate@1"
         },
         {
-          "command": "sobek.linkPlan",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt-noplan",
+          "command": "sobek.createChildTemplate",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
           "group": "0_generate@2"
         },
         {
-          "command": "sobek.unlinkPlan",
-          "when": "view == sobekPrompts && viewItem == sobekRootPrompt-plan",
-          "group": "0_generate@3"
+          "command": "sobek.linkPlan",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt-noplan",
+          "group": "0_plan@1"
         },
         {
-          "command": "sobek.createChildTemplate",
-          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt/",
-          "group": "0_generate@4"
+          "command": "sobek.openLinkedPlan",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt-plan/",
+          "group": "0_plan@1"
+        },
+        {
+          "command": "sobek.planVersionHistory",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt-plan/",
+          "group": "0_plan@2"
+        },
+        {
+          "command": "sobek.capturePlanVersion",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt-plan/",
+          "group": "0_plan@3"
+        },
+        {
+          "command": "sobek.pausePlanMonitoring",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt-plan",
+          "group": "0_plan@4"
+        },
+        {
+          "command": "sobek.resumePlanMonitoring",
+          "when": "view == sobekPrompts && viewItem == sobekRootPrompt-plan-paused",
+          "group": "0_plan@4"
+        },
+        {
+          "command": "sobek.unlinkPlan",
+          "when": "view == sobekPrompts && viewItem =~ /^sobekRootPrompt-plan/",
+          "group": "0_plan@5"
         },
         {
           "command": "sobek.renamePrompt",

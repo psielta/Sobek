@@ -53,9 +53,13 @@ export class PromptTreeItem extends vscode.TreeItem {
 
     this.id = prompt.id;
     // Faceted context value drives conditional inline actions (e.g. "link
-    // plan" only when no plan is linked yet).
+    // plan" only when no plan is linked yet, pause/resume monitoring).
     this.contextValue = isRoot
-      ? `sobekRootPrompt-${prompt.linkedPlan ? "plan" : "noplan"}`
+      ? prompt.linkedPlan
+        ? prompt.linkedPlan.monitoringPaused
+          ? "sobekRootPrompt-plan-paused"
+          : "sobekRootPrompt-plan"
+        : "sobekRootPrompt-noplan"
       : "sobekChildPrompt";
 
     const statusLabel = promptStatusLabel(prompt.status);
@@ -78,7 +82,11 @@ export class PromptTreeItem extends vscode.TreeItem {
             })`
           : undefined,
         prompt.linkedPlan
-          ? `- ${vscode.l10n.t("Plan")}: ${prompt.linkedPlan.displayName}`
+          ? `- ${vscode.l10n.t("Plan")}: ${prompt.linkedPlan.displayName}${
+              prompt.linkedPlan.monitoringPaused
+                ? ` (${vscode.l10n.t("monitoring paused")})`
+                : ""
+            }`
           : undefined,
       ]
         .filter((line): line is string => line !== undefined)

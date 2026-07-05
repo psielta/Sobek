@@ -10,6 +10,7 @@ import {
   MentionLinkProvider,
   registerMentionRetrigger,
 } from "./language/mention-features";
+import { PlanWatcherManager } from "./store/plan-watcher";
 import { PromptStore } from "./store/prompt-store";
 import { getWorkspaceRoot } from "./store/workspace";
 import { TerminalManager } from "./terminals/manager";
@@ -24,6 +25,7 @@ import { CHILD_PREVIEW_SCHEME, ChildPromptPreviewProvider } from "./ui/child-pre
 import { registerRefineCommand } from "./ui/refine-command";
 import { UsageStatusBar } from "./ui/usage-status";
 import { registerGenerateChildCommands } from "./ui/generate-child";
+import { registerPlanCommands } from "./ui/plan-commands";
 import { registerPromptCommands } from "./ui/prompt-commands";
 import { PromptTreeProvider } from "./ui/tree";
 import { registerWorkflowCommands } from "./ui/workflow-commands";
@@ -114,7 +116,26 @@ async function initialize(context: vscode.ExtensionContext): Promise<void> {
   const terminals = new TerminalManager(store, context);
   store.onDidArchive((promptId) => terminals.killForPrompt(promptId));
 
+  // Linked plans are watched while the prompt is active (Thoth rule: archived
+  // prompts stop monitoring); every content change becomes a plan version.
+  const planWatcher = new PlanWatcherManager(store);
+  planWatcher.onDidCaptureVersion = (promptId, version) => {
+    const plan = store.get(promptId)?.linkedPlan;
+    vscode.window.setStatusBarMessage(
+      vscode.l10n.t(
+        'Sobek: plan "{0}" captured as v{1}',
+        plan?.displayName ?? "?",
+        version.versionNumber
+      ),
+      5000
+    );
+  };
+  store.onDidChange(() => planWatcher.sync());
+  planWatcher.sync();
+  context.subscriptions.push({ dispose: () => planWatcher.dispose() });
+
   registerPromptCommands(context, store);
+  registerPlanCommands(context, store);
   registerGenerateChildCommands(context, store, (child) =>
     offerAgentTerminalForChild(terminals, child)
   );
