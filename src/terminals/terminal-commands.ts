@@ -2,7 +2,13 @@ import * as vscode from "vscode";
 import type { Prompt, TargetAgent } from "../core/prompt";
 import type { PromptStore } from "../store/prompt-store";
 import type { PromptTreeItem } from "../ui/tree";
-import { buildAgentCommand, EFFORT_LEVELS, type AgentKind, type EffortLevel } from "./agents";
+import {
+  buildAgentCommand,
+  EFFORT_LEVELS,
+  type AgentKind,
+  type EffortLevel,
+  type WorktreeOption,
+} from "./agents";
 import { TerminalManager } from "./manager";
 
 /**
@@ -50,6 +56,74 @@ async function resolveEffort(agent: AgentKind): Promise<{ effort?: EffortLevel }
     return undefined;
   }
   return { effort: picked.effort };
+}
+
+/**
+ * Resolves Claude's `--worktree` for the launch. The sobek.terminals
+ * .claudeWorktree setting can pin "off"/"on" or "ask" (default) to offer the
+ * choice per launch: no worktree, auto-named worktree or a named one.
+ * Returns undefined when the user cancels, aborting the launch.
+ */
+async function resolveWorktree(
+  agent: AgentKind
+): Promise<{ worktree?: WorktreeOption } | undefined> {
+  if (agent !== "Claude" && agent !== "ClaudePlan") {
+    return {};
+  }
+  const configured = vscode.workspace
+    .getConfiguration("sobek.terminals")
+    .get<string>("claudeWorktree", "ask");
+  if (configured === "off") {
+    return {};
+  }
+  if (configured === "on") {
+    return { worktree: true };
+  }
+
+  const picked = await vscode.window.showQuickPick(
+    [
+      {
+        label: `$(circle-slash) ${vscode.l10n.t("No worktree")}`,
+        description: vscode.l10n.t("Runs in the current workspace checkout"),
+        value: "none" as const,
+      },
+      {
+        label: `$(git-branch) ${vscode.l10n.t("New worktree")}`,
+        description: "--worktree",
+        value: "auto" as const,
+      },
+      {
+        label: `$(edit) ${vscode.l10n.t("New worktree with a name...")}`,
+        description: "--worktree <name>",
+        value: "named" as const,
+      },
+    ],
+    { placeHolder: vscode.l10n.t("Isolate this session in a git worktree?") }
+  );
+  if (!picked) {
+    return undefined;
+  }
+  if (picked.value === "named") {
+    const name = await vscode.window.showInputBox({
+      prompt: vscode.l10n.t("Worktree name"),
+      placeHolder: vscode.l10n.t("E.g.: feature-csv-export"),
+      ignoreFocusOut: true,
+      validateInput: (value) => {
+        const trimmed = value.trim();
+        if (trimmed.length === 0) {
+          return vscode.l10n.t("Enter a name.");
+        }
+        return /^[\w./-]+$/.test(trimmed)
+          ? undefined
+          : vscode.l10n.t("Use only letters, numbers and . _ / -");
+      },
+    });
+    if (name === undefined) {
+      return undefined;
+    }
+    return { worktree: name.trim() };
+  }
+  return picked.value === "auto" ? { worktree: true } : {};
 }
 
 type PromptRef = string | PromptTreeItem | undefined;
@@ -111,7 +185,7 @@ function agentPicks(): Array<{ label: string; description: string; agent: AgentK
   return [
     {
       label: "Claude",
-      description: "claude --dangerously-skip-permissions [--effort ...]",
+      description: "claude --dangerously-skip-permissions [--effort ...] [--worktree]",
       agent: "Claude",
     },
     {
@@ -167,7 +241,11 @@ export function registerTerminalCommands(
       if (!effort) {
         return;
       }
-      await manager.create({ prompt, agent, effort: effort.effort });
+      const worktree = await resolveWorktree(agent);
+      if (!worktree) {
+        return;
+      }
+      await manager.create({ prompt, agent, effort: effort.effort, worktree: worktree.worktree });
     }),
 
     vscode.commands.registerCommand("sobek.runPromptInAgentTerminal", async (ref: PromptRef) => {
@@ -201,12 +279,17 @@ export function registerTerminalCommands(
       if (!effort) {
         return;
       }
+      const worktree = await resolveWorktree(agent);
+      if (!worktree) {
+        return;
+      }
       await manager.create({
         prompt,
         agent,
         submitPrompt: mode === "run",
         stagePrompt: mode === "stage",
         effort: effort.effort,
+        worktree: worktree.worktree,
       });
     }),
 
@@ -227,7 +310,11 @@ export function registerTerminalCommands(
         if (!effort) {
           return;
         }
-        await manager.create({ agent: kind, effort: effort.effort });
+        const worktree = await resolveWorktree(kind);
+        if (!worktree) {
+          return;
+        }
+        await manager.create({ agent: kind, effort: effort.effort, worktree: worktree.worktree });
         return;
       }
       await manager.create({});
@@ -290,11 +377,16 @@ export async function offerAgentTerminalForChild(
   if (!effort) {
     return;
   }
+  const worktree = await resolveWorktree(resolvedAgent);
+  if (!worktree) {
+    return;
+  }
   await manager.create({
     prompt: child,
     agent: resolvedAgent,
     submitPrompt: mode === "run",
     stagePrompt: mode === "stage",
     effort: effort.effort,
+    worktree: worktree.worktree,
   });
 }

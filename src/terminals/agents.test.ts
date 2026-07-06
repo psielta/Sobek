@@ -38,6 +38,17 @@ describe("agent launch commands", () => {
     expect(buildAgentCommand("Codex", "max")).toBe("codex --yolo");
   });
 
+  it("adds --worktree for Claude launches only, never adjacent to a positional", () => {
+    expect(buildAgentCommand("Claude", undefined, true)).toBe(
+      "claude --worktree --dangerously-skip-permissions"
+    );
+    expect(buildAgentCommand("Claude", "max", "feature-x")).toBe(
+      "claude --worktree feature-x --dangerously-skip-permissions --effort max"
+    );
+    expect(buildAgentCommand("Codex", undefined, true)).toBe("codex --yolo");
+    expect(buildAgentCommand("Grok", "high", true)).toBe("grok --always-approve --effort high");
+  });
+
   it("keeps the agent tab defaults", () => {
     expect(AGENT_TAB_DEFAULTS.Claude).toMatchObject({ name: "Claude", color: "#8761b9" });
     expect(AGENT_TAB_DEFAULTS.ClaudePlan).toMatchObject({ name: "Claude Plan", color: "#5b4b8a" });
@@ -71,6 +82,26 @@ describe("buildAgentRunCommand", () => {
     );
     expect(buildAgentRunCommand("ClaudePlan", "planeje isso", "powershell")).toBe(
       "claude --permission-mode plan 'planeje isso'"
+    );
+  });
+
+  it("carries --worktree into run and plan commands, never adjacent to the prompt", () => {
+    // A bare --worktree right before the positional prompt would consume it
+    // as the worktree name (the flag's value is optional and greedy).
+    expect(buildAgentRunCommand("Claude", "faça x", "powershell", "max", true)).toBe(
+      "claude --worktree --dangerously-skip-permissions --effort max 'faça x'"
+    );
+    expect(buildAgentRunCommand("Claude", "faça x", "powershell", undefined, true)).toBe(
+      "claude --worktree --dangerously-skip-permissions 'faça x'"
+    );
+    expect(buildAgentRunCommand("ClaudePlan", "planeje", "powershell", undefined, "wt-plan")).toBe(
+      "claude --worktree wt-plan --permission-mode plan 'planeje'"
+    );
+    expect(buildAgentRunCommand("ClaudePlan", "planeje", "powershell", undefined, true)).toBe(
+      "claude --worktree --permission-mode plan 'planeje'"
+    );
+    expect(buildAgentRunCommand("Codex", "faça x", "powershell", undefined, true)).toBe(
+      "codex --yolo 'faça x'"
     );
   });
 });

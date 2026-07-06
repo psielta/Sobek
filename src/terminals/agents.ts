@@ -10,23 +10,46 @@ export type EffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
 
 export const EFFORT_LEVELS: EffortLevel[] = ["low", "medium", "high", "xhigh", "max"];
 
-const CLAUDE_BASE_COMMAND = "claude --dangerously-skip-permissions";
 const GROK_BASE_COMMAND = "grok --always-approve";
+
+/**
+ * Claude's `-w, --worktree [name]`: `true` passes the bare flag (auto name),
+ * a string names the worktree. Codex/Grok have no equivalent — ignored there.
+ * Names are restricted by the UI to shell-safe characters, so no quoting.
+ *
+ * The flag's value is OPTIONAL and greedy: `--worktree <prompt>` would eat a
+ * positional prompt as the worktree name, so builders always place it right
+ * after `claude`, followed by another flag (never by the prompt).
+ */
+export type WorktreeOption = boolean | string;
+
+function worktreeFlag(worktree?: WorktreeOption): string {
+  if (!worktree) {
+    return "";
+  }
+  return typeof worktree === "string" ? ` --worktree ${worktree}` : " --worktree";
+}
 
 /**
  * CLI invocation per agent, verified against the installed CLIs: Claude and
  * Grok accept `--effort low|medium|high|xhigh|max` (omitted = CLI default);
- * Codex keeps `--yolo` (still accepted as an alias of
- * --dangerously-bypass-approvals-and-sandbox).
+ * Claude also accepts `--worktree [name]`; Codex keeps `--yolo` (still
+ * accepted as an alias of --dangerously-bypass-approvals-and-sandbox).
  */
-export function buildAgentCommand(agent: AgentKind, effort?: EffortLevel): string {
+export function buildAgentCommand(
+  agent: AgentKind,
+  effort?: EffortLevel,
+  worktree?: WorktreeOption
+): string {
   switch (agent) {
     case "Codex":
       return "codex --yolo";
     case "Grok":
       return effort ? `${GROK_BASE_COMMAND} --effort ${effort}` : GROK_BASE_COMMAND;
-    default:
-      return effort ? `${CLAUDE_BASE_COMMAND} --effort ${effort}` : CLAUDE_BASE_COMMAND;
+    default: {
+      const effortFlag = effort ? ` --effort ${effort}` : "";
+      return `claude${worktreeFlag(worktree)} --dangerously-skip-permissions${effortFlag}`;
+    }
   }
 }
 
@@ -53,7 +76,8 @@ export function buildAgentRunCommand(
   agent: AgentKind,
   prompt: string,
   shell: ShellFlavor,
-  effort?: EffortLevel
+  effort?: EffortLevel,
+  worktree?: WorktreeOption
 ): string {
   const quoted = quoteForShell(flattenPromptForCli(prompt), shell);
   switch (agent) {
@@ -63,10 +87,10 @@ export function buildAgentRunCommand(
       return `${buildAgentCommand("Grok", effort)} ${quoted}`;
     case "ClaudePlan": {
       const effortFlag = effort ? ` --effort ${effort}` : "";
-      return `claude${effortFlag} --permission-mode plan ${quoted}`;
+      return `claude${worktreeFlag(worktree)}${effortFlag} --permission-mode plan ${quoted}`;
     }
     default:
-      return `${buildAgentCommand("Claude", effort)} ${quoted}`;
+      return `${buildAgentCommand("Claude", effort, worktree)} ${quoted}`;
   }
 }
 

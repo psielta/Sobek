@@ -42,6 +42,7 @@
   "cmd.setGeminiApiKey": "Set Gemini API Key",
   "config.showAgentTerminalOffer": "After creating a child prompt, offer to open a terminal with the target agent already running the prompt.",
   "config.claudeEffort": "Claude's --effort flag on terminal launches: \"ask\" prompts every time, \"default\" omits the flag, or pin low/medium/high/xhigh/max.",
+  "config.claudeWorktree": "Claude's --worktree flag on terminal launches: \"ask\" offers the choice (none, auto-named or named worktree) every time, \"off\" never uses it, \"on\" always launches in a new auto-named worktree.",
   "config.grokEffort": "Grok's --effort flag on terminal launches: \"ask\" prompts every time, \"default\" omits the flag, or pin low/medium/high/xhigh/max.",
   "config.stageDelay": "Milliseconds to wait for the agent CLI to boot before typing a staged draft (\"Stage as draft\" mode). Increase if drafts arrive truncated.",
   "config.terminalLocation": "Where Sobek terminals open: \"ask\" prompts on every creation, \"panel\" uses the terminal panel (Ctrl+`), \"editor\" opens them as editor tabs.",

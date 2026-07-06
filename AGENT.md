@@ -20,7 +20,7 @@ Trate este repositório como projeto de portfólio: preserve clareza arquitetura
 - Toda mudança de conteúdo ou status cria uma `PromptVersion` imutável e incrementa `currentVersion`.
 - Concluir o workflow NÃO arquiva o prompt: `Prompt.status` e `Workflow.status` são eixos independentes.
 - Arquivar um prompt encerra seus terminais (evento `onDidArchive` do store) e impede novos terminais.
-- Comandos base dos agentes nos terminais: `claude --dangerously-skip-permissions`, `codex --yolo`, `grok --always-approve`; `--effort` é opcional (escolha por lançamento ou fixado nas settings, em `src/terminals/agents.ts`). Executar/plan passa o prompt como argumento posicional do CLI; "preencher como rascunho" digita o prompt achatado SEM Enter.
+- Comandos base dos agentes nos terminais: `claude --dangerously-skip-permissions`, `codex --yolo`, `grok --always-approve`; `--effort` é opcional (escolha por lançamento ou fixado nas settings, em `src/terminals/agents.ts`). Claude também aceita `--worktree [nome]` (setting `sobek.terminals.claudeWorktree`) — o valor da flag é opcional e guloso, então ela SEMPRE vai logo após `claude`, seguida de outra flag, nunca antes do prompt posicional. Executar/plan passa o prompt como argumento posicional do CLI; "preencher como rascunho" digita o prompt achatado SEM Enter.
 - A chave Gemini vive apenas no SecretStorage; nunca a escreva em arquivos ou settings.
 
 ## Arquitetura

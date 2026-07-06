@@ -41,7 +41,7 @@ The project ports the **core** of [Thoth](https://github.com/psielta/gerenciamen
 
 ### 🖥️ Per-prompt terminals
 - Native VS Code terminals opened at the workspace root, bound to the prompt, named and colored per agent — in the terminal panel or as **editor tabs**, your choice.
-- Quick launch for **Claude, Claude Plan, Codex and Grok** with the right flags — `--effort` (up to `xhigh`/`max`) is your call per launch or pinned in settings.
+- Quick launch for **Claude, Claude Plan, Codex and Grok** with the right flags — `--effort` (up to `xhigh`/`max`) is your call per launch or pinned in settings, and Claude sessions can run in an **isolated git worktree** (`--worktree`, auto-named or named, per launch or pinned).
 - Pick the **execution mode** per run: submit now (prompt passed as a CLI argument — it can never arrive truncated), stage as an unsent draft, Claude plan mode (`--permission-mode plan`) or just open the agent.
 - A **Terminals view** groups every session by root prompt (child prompt terminals show under the parent with a "Child" badge); archiving a prompt kills its terminals; after creating a child prompt, Sobek offers to run it immediately.
 

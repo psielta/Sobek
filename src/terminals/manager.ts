@@ -13,6 +13,7 @@ import {
   type AgentKind,
   type EffortLevel,
   type ShellFlavor,
+  type WorktreeOption,
 } from "./agents";
 
 export const MAX_SESSIONS_PER_PROMPT = 8;
@@ -161,6 +162,8 @@ export class TerminalManager {
     stagePrompt?: boolean;
     /** --effort level for Claude/Grok launches (omitted = CLI default). */
     effort?: EffortLevel;
+    /** Claude's --worktree: true = auto-named, string = named worktree. */
+    worktree?: WorktreeOption;
   }): Promise<vscode.Terminal | undefined> {
     const { prompt, agent } = options;
 
@@ -206,12 +209,18 @@ export class TerminalManager {
       if (agent === "ClaudePlan" && content) {
         // Plan mode with the prompt as a CLI argument: nothing to type into a
         // booting TUI, so the prompt can never be cut off.
-        terminal.sendText(buildAgentRunCommand("ClaudePlan", content, shell, options.effort), true);
+        terminal.sendText(
+          buildAgentRunCommand("ClaudePlan", content, shell, options.effort, options.worktree),
+          true
+        );
         await this.tryEnterPlanMode(prompt);
       } else if (options.submitPrompt && content) {
-        terminal.sendText(buildAgentRunCommand(agent, content, shell, options.effort), true);
+        terminal.sendText(
+          buildAgentRunCommand(agent, content, shell, options.effort, options.worktree),
+          true
+        );
       } else {
-        terminal.sendText(buildAgentCommand(agent, options.effort), true);
+        terminal.sendText(buildAgentCommand(agent, options.effort, options.worktree), true);
         if (options.stagePrompt && content) {
           const stageDelay = vscode.workspace
             .getConfiguration("sobek.terminals")

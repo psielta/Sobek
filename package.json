@@ -543,6 +543,16 @@
           ],
           "description": "%config.claudeEffort%"
         },
+        "sobek.terminals.claudeWorktree": {
+          "type": "string",
+          "default": "ask",
+          "enum": [
+            "ask",
+            "off",
+            "on"
+          ],
+          "description": "%config.claudeWorktree%"
+        },
         "sobek.terminals.grokEffort": {
           "type": "string",
           "default": "default",

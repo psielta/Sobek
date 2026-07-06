@@ -41,7 +41,7 @@ O projeto porta o **core** do [Thoth](https://github.com/psielta/gerenciamento-d
 
 ### 🖥️ Terminais por prompt
 - Terminais nativos do VS Code abertos na raiz do workspace, associados ao prompt, com nome e cor por agente — no painel de terminal ou como **abas do editor**, você escolhe.
-- Lançamento rápido de **Claude, Claude Plan, Codex e Grok** com os flags corretos — o `--effort` (até `xhigh`/`max`) é escolha sua por lançamento ou fixado nas settings.
+- Lançamento rápido de **Claude, Claude Plan, Codex e Grok** com os flags corretos — o `--effort` (até `xhigh`/`max`) é escolha sua por lançamento ou fixado nas settings, e sessões do Claude podem rodar em uma **worktree git isolada** (`--worktree`, com nome automático ou escolhido, por lançamento ou fixado).
 - Escolha o **modo de execução** a cada run: executar agora (prompt passado como argumento do CLI — nunca chega cortado), preencher como rascunho, plan mode do Claude (`--permission-mode plan`) ou apenas abrir o agente.
 - A view **Terminais** agrupa as sessões por prompt raiz (terminais de filhos aparecem sob o pai com badge "Filho"); arquivar um prompt encerra seus terminais; após criar um filho, o Sobek oferece executá-lo na hora.
 

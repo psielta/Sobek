@@ -42,6 +42,7 @@
   "cmd.setGeminiApiKey": "Configurar chave Gemini",
   "config.showAgentTerminalOffer": "Após criar um prompt filho, oferecer abrir um terminal com o agente alvo já executando o prompt.",
   "config.claudeEffort": "Flag --effort do Claude ao abrir terminais: \"ask\" pergunta a cada vez, \"default\" omite a flag, ou fixe low/medium/high/xhigh/max.",
+  "config.claudeWorktree": "Flag --worktree do Claude ao abrir terminais: \"ask\" oferece a escolha (sem worktree, nome automático ou nomeada) a cada vez, \"off\" nunca usa, \"on\" sempre abre em uma worktree nova com nome automático.",
   "config.grokEffort": "Flag --effort do Grok ao abrir terminais: \"ask\" pergunta a cada vez, \"default\" omite a flag, ou fixe low/medium/high/xhigh/max.",
   "config.stageDelay": "Milissegundos de espera pelo boot do CLI antes de digitar o rascunho (modo \"Preencher como rascunho\"). Aumente se o rascunho chegar cortado.",
   "config.terminalLocation": "Onde os terminais do Sobek abrem: \"ask\" pergunta a cada criação, \"panel\" usa o painel de terminal (Ctrl+`), \"editor\" abre como aba do editor.",
