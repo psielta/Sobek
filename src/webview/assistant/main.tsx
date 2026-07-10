@@ -295,14 +295,24 @@ function App() {
     if (!mention) {
       return;
     }
+    // Directories (trailing "/") drill down: no closing space, dropdown stays
+    // open searching inside the folder — like Claude Code's @ picker.
+    const isDirectory = file.endsWith("/");
+    const suffix = isDirectory ? "" : " ";
     const cursor = textareaRef.current?.selectionStart ?? input.length;
-    const next = `${input.slice(0, mention.start)}${file} ${input.slice(cursor)}`;
+    const next = `${input.slice(0, mention.start)}${file}${suffix}${input.slice(cursor)}`;
     setInput(next);
-    setMention(undefined);
+    if (isDirectory) {
+      setMention({ start: mention.start, query: file, items: [], active: 0 });
+      searchSeq.current += 1;
+      vscode.postMessage({ type: "searchFiles", query: file, requestId: searchSeq.current });
+    } else {
+      setMention(undefined);
+    }
     requestAnimationFrame(() => {
       const textarea = textareaRef.current;
       if (textarea) {
-        const position = mention.start + file.length + 1;
+        const position = mention.start + file.length + suffix.length;
         textarea.focus();
         textarea.setSelectionRange(position, position);
       }
@@ -424,9 +434,11 @@ function App() {
           {mention && mention.items.length > 0 && (
             <ul className="mention-dropdown">
               {mention.items.map((file, index) => {
-                const slash = file.lastIndexOf("/");
-                const name = slash >= 0 ? file.slice(slash + 1) : file;
-                const dir = slash >= 0 ? file.slice(0, slash) : "";
+                const isDirectory = file.endsWith("/");
+                const base = isDirectory ? file.slice(0, -1) : file;
+                const slash = base.lastIndexOf("/");
+                const name = slash >= 0 ? base.slice(slash + 1) : base;
+                const dir = slash >= 0 ? base.slice(0, slash) : "";
                 return (
                   <li
                     key={file}
@@ -437,8 +449,8 @@ function App() {
                       applyMention(file);
                     }}
                   >
-                    <i className="codicon codicon-file" />
-                    <span className="mention-name">{name}</span>
+                    <i className={`codicon ${isDirectory ? "codicon-folder" : "codicon-file"}`} />
+                    <span className="mention-name">{isDirectory ? `${name}/` : name}</span>
                     {dir && <span className="mention-dir">{dir}</span>}
                   </li>
                 );
