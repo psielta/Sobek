@@ -50,16 +50,29 @@ export class MentionCompletionProvider implements vscode.CompletionItemProvider 
     const range = new vscode.Range(position.line, replaceStart, position.line, position.character);
 
     const buildItem = (relative: string, order: number): vscode.CompletionItem => {
-      const item = new vscode.CompletionItem(relative, vscode.CompletionItemKind.File);
+      const isDirectory = relative.endsWith("/");
+      const item = new vscode.CompletionItem(
+        relative,
+        isDirectory ? vscode.CompletionItemKind.Folder : vscode.CompletionItemKind.File
+      );
       item.insertText = relative;
       // Filter on the whole relative path so typing "src/ma" keeps matching.
       item.filterText = relative;
       item.sortText = String(order).padStart(5, "0");
       item.range = range;
-      item.detail = vscode.l10n.t("Workspace file mention");
+      item.detail = isDirectory
+        ? vscode.l10n.t("Workspace directory mention")
+        : vscode.l10n.t("Workspace file mention");
       // The suggest widget truncates long labels; the docs panel (chevron or
       // Ctrl+Space) is the only place the full path can be read.
       item.documentation = new vscode.MarkdownString().appendCodeblock(relative);
+      if (isDirectory) {
+        // Drill-down: accepting "src/" reopens the widget searching inside it.
+        item.command = {
+          command: "editor.action.triggerSuggest",
+          title: vscode.l10n.t("Keep searching inside the folder"),
+        };
+      }
       return item;
     };
 
@@ -125,10 +138,15 @@ export class MentionDiagnostics {
             ? vscode.l10n.t("The mention @{0} escapes the workspace directory.", issue.mention.raw)
             : issue.reason === "not-a-file"
               ? vscode.l10n.t(
-                  "The mention @{0} points to a directory, not a file.",
+                  "The mention @{0} points to something that is not a file or directory.",
                   issue.mention.raw
                 )
-              : vscode.l10n.t("File not found in the workspace: {0}", issue.mention.raw);
+              : issue.reason === "not-a-directory"
+                ? vscode.l10n.t(
+                    "The mention @{0} has a trailing slash but points to a file.",
+                    issue.mention.raw
+                  )
+                : vscode.l10n.t("File not found in the workspace: {0}", issue.mention.raw);
         const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Warning);
         diagnostic.source = "sobek";
         return diagnostic;
@@ -185,14 +203,16 @@ export function registerMentionRetrigger(
   );
 }
 
-/** Makes `@path` mentions clickable, opening the referenced file. */
+/** Makes `@path` mentions clickable: files open, folders reveal in Explorer. */
 export class MentionLinkProvider implements vscode.DocumentLinkProvider {
   constructor(
     private readonly store: PromptStore,
     private readonly workspaceRoot: string
   ) {}
 
-  provideDocumentLinks(document: vscode.TextDocument): vscode.DocumentLink[] | undefined {
+  async provideDocumentLinks(
+    document: vscode.TextDocument
+  ): Promise<vscode.DocumentLink[] | undefined> {
     if (!isPromptDocument(this.store, document)) {
       return undefined;
     }
@@ -206,8 +226,22 @@ export class MentionLinkProvider implements vscode.DocumentLinkProvider {
         document.positionAt(mention.start),
         document.positionAt(mention.end)
       );
-      const link = new vscode.DocumentLink(range, vscode.Uri.file(resolved));
-      link.tooltip = vscode.l10n.t("Open mentioned file");
+      const uri = vscode.Uri.file(resolved);
+      let isDirectory = false;
+      try {
+        isDirectory = (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory;
+      } catch {
+        // Unresolvable mention: keep the file-link behavior (open attempt).
+      }
+      const link = isDirectory
+        ? new vscode.DocumentLink(
+            range,
+            vscode.Uri.parse(`command:revealInExplorer?${encodeURIComponent(JSON.stringify(uri))}`)
+          )
+        : new vscode.DocumentLink(range, uri);
+      link.tooltip = isDirectory
+        ? vscode.l10n.t("Reveal mentioned folder in Explorer")
+        : vscode.l10n.t("Open mentioned file");
       links.push(link);
     }
     return links;
