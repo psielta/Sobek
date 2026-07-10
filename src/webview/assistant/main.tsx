@@ -430,6 +430,7 @@ function App() {
                 return (
                   <li
                     key={file}
+                    title={file}
                     className={index === mention.active ? "active" : undefined}
                     onMouseDown={(event) => {
                       event.preventDefault();
