@@ -57,6 +57,9 @@ export class MentionCompletionProvider implements vscode.CompletionItemProvider 
       item.sortText = String(order).padStart(5, "0");
       item.range = range;
       item.detail = vscode.l10n.t("Workspace file mention");
+      // The suggest widget truncates long labels; the docs panel (chevron or
+      // Ctrl+Space) is the only place the full path can be read.
+      item.documentation = new vscode.MarkdownString().appendCodeblock(relative);
       return item;
     };
 
