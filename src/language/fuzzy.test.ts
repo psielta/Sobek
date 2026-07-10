@@ -40,6 +40,16 @@ describe("fuzzyScore", () => {
   it("is case-insensitive", () => {
     expect(fuzzyScore("MAIN", "src/Main.TS")).toBeDefined();
   });
+
+  it("label-matches directories despite the trailing slash", () => {
+    const dirPrefix = fuzzyScore("media", "media/")!;
+    const inPath = fuzzyScore("med", "media-kit/other.py")!;
+    expect(dirPrefix).toBeGreaterThan(inPath);
+    const nested = fuzzyScore("webview", "src/webview/")!;
+    const nestedPathOnly = fuzzyScore("webview", "src/webview/main.tsx")!;
+    expect(nested).toBeGreaterThan(0);
+    expect(nestedPathOnly).toBeGreaterThan(0);
+  });
 });
 
 describe("rankPaths", () => {
@@ -64,6 +74,17 @@ describe("rankPaths", () => {
 
   it("respects the limit", () => {
     expect(rankPaths("", files, 2)).toHaveLength(2);
+  });
+
+  it("sorts a root directory at root depth, not one level deeper", () => {
+    const mixed = ["b.ts", "a/", "a/x.ts"];
+    expect(rankPaths("", mixed, 3)).toEqual(["a/", "b.ts", "a/x.ts"]);
+  });
+
+  it("ranks directories among files for a basename query", () => {
+    const mixed = ["src/media-player.ts", "media/", "media/icon.png"];
+    const results = rankPaths("media", mixed, 3);
+    expect(results[0]).toBe("media/");
   });
 
   it("ranks 20k paths well under a keystroke budget", () => {

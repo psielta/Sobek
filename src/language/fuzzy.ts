@@ -194,8 +194,11 @@ export function fuzzyScore(query: string, targetPath: string): number | undefine
     return PATH_IDENTITY_SCORE;
   }
 
-  const slash = normalizedPath.lastIndexOf("/");
-  const label = slash >= 0 ? normalizedPath.slice(slash + 1) : normalizedPath;
+  // Directories carry a trailing "/" — strip it so their basename still
+  // label-matches ("media" must hit "media/") instead of an empty label.
+  const basePath = normalizedPath.endsWith("/") ? normalizedPath.slice(0, -1) : normalizedPath;
+  const slash = basePath.lastIndexOf("/");
+  const label = slash >= 0 ? basePath.slice(slash + 1) : basePath;
   const preferLabelMatches = !trimmed.includes("/") && !trimmed.includes("\\");
 
   if (preferLabelMatches) {
@@ -245,5 +248,7 @@ function depth(candidate: string): number {
       count++;
     }
   }
-  return count;
+  // A directory's trailing "/" is a marker, not a level: "media/" sits at
+  // the same depth as "readme.md".
+  return candidate.endsWith("/") ? count - 1 : count;
 }

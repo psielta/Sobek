@@ -36,9 +36,24 @@ export class WorkspaceFileIndex {
     const watcher = vscode.workspace.createFileSystemWatcher("**/*");
     context.subscriptions.push(
       watcher,
-      watcher.onDidCreate((uri) => this.add(uri)),
+      watcher.onDidCreate((uri) => void this.addCreated(uri)),
       watcher.onDidDelete((uri) => this.remove(uri))
     );
+  }
+
+  /**
+   * Create events also fire for directories; only real files enter `files`
+   * (directories are derived from file paths when the search cache rebuilds).
+   */
+  private async addCreated(uri: vscode.Uri): Promise<void> {
+    try {
+      const stats = await vscode.workspace.fs.stat(uri);
+      if (stats.type === vscode.FileType.File) {
+        this.add(uri);
+      }
+    } catch {
+      // Gone before we could stat it — the delete event will follow.
+    }
   }
 
   private toRelative(uri: vscode.Uri): string | undefined {
@@ -103,15 +118,37 @@ export class WorkspaceFileIndex {
     this.arrayCache = undefined;
   }
 
+  /** Parent chains of every file, as trailing-slash paths ("a/", "a/b/"). */
+  private deriveDirectories(): Set<string> {
+    const directories = new Set<string>();
+    for (const file of this.files) {
+      let slash = file.lastIndexOf("/");
+      while (slash > 0) {
+        const dir = `${file.slice(0, slash)}/`;
+        if (directories.has(dir)) {
+          break;
+        }
+        directories.add(dir);
+        slash = file.lastIndexOf("/", slash - 1);
+      }
+    }
+    return directories;
+  }
+
   async search(query: string, limit: number): Promise<string[]> {
     await this.ensureLoaded();
     if (!this.arrayCache) {
-      this.arrayCache = [...this.files];
+      this.arrayCache = [...this.files, ...this.deriveDirectories()];
     }
-    return rankPaths(query, this.arrayCache, limit);
+    // After drill-down the query is the directory itself ("src/") — ranking
+    // it first is noise, so fetch one extra and drop the exact match.
+    const normalizedQuery = query.trim().replace(/\\/g, "/").toLowerCase();
+    return rankPaths(query, this.arrayCache, limit + 1)
+      .filter((entry) => !(entry.endsWith("/") && entry.toLowerCase() === normalizedQuery))
+      .slice(0, limit);
   }
 
-  /** Every indexed path, shallow-first then alphabetical (cached). */
+  /** Every indexed FILE path, shallow-first then alphabetical (cached). */
   async all(): Promise<string[]> {
     await this.ensureLoaded();
     if (!this.sortedCache) {
