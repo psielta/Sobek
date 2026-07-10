@@ -7,6 +7,7 @@ import type { Prompt } from "../core/prompt";
 import { WORKFLOW_ACTOR_LABELS } from "../core/workflow";
 import type { PromptStore } from "../store/prompt-store";
 import {
+  buildDirectoryListing,
   buildGitContextBlock,
   buildLinkedPlanBlock,
   buildMentionedFilesBlock,
@@ -53,6 +54,26 @@ async function readBounded(
   }
 }
 
+/** Shallow listing for a mentioned directory, under the same shared budget. */
+async function readDirectoryListing(
+  dirPath: string,
+  budget: ContextBudget
+): Promise<string | undefined> {
+  try {
+    const dirents = await fs.readdir(dirPath, { withFileTypes: true });
+    const listing = buildDirectoryListing(
+      dirents.map((dirent) => ({ name: dirent.name, isDirectory: dirent.isDirectory() }))
+    );
+    if (!budget.fits(listing)) {
+      return undefined;
+    }
+    budget.take(listing);
+    return listing;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Resolves a workspace-relative path, rejecting escapes — same rule as mentions. */
 function resolveInside(root: string, relative: string): string | undefined {
   const resolved = path.resolve(root, relative);
@@ -71,13 +92,27 @@ export async function readSelectedFiles(
   const seen = new Set<string>();
   const files: NamedContent[] = [];
   for (const relative of relativePaths) {
-    const key = relative.replace(/\\/g, "/").toLowerCase();
+    // Trailing slash stripped so `@src` and `@src/` dedupe to one entry.
+    const key = relative.replace(/\\/g, "/").replace(/\/$/, "").toLowerCase();
     if (seen.has(key)) {
       continue;
     }
     seen.add(key);
     const resolved = resolveInside(root, relative);
     if (!resolved) {
+      continue;
+    }
+    let isDirectory = false;
+    try {
+      isDirectory = (await fs.stat(resolved)).isDirectory();
+    } catch {
+      continue;
+    }
+    if (isDirectory) {
+      const listing = await readDirectoryListing(resolved, budget);
+      if (listing) {
+        files.push({ name: relative.replace(/\\/g, "/").replace(/\/?$/, "/"), content: listing });
+      }
       continue;
     }
     const content = await readBounded(resolved, budget);

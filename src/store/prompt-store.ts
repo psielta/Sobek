@@ -278,7 +278,8 @@ export class PromptStore {
   private async buildFileReferences(content: string): Promise<FileReference[]> {
     const seen = new Map<string, FileReference>();
     for (const mention of parseMentions(content)) {
-      const normalizedKey = mention.raw.replace(/\\/g, "/").toLowerCase();
+      // Trailing slash stripped so `@src` and `@src/` dedupe to one reference.
+      const normalizedKey = mention.raw.replace(/\\/g, "/").replace(/\/$/, "").toLowerCase();
       if (seen.has(normalizedKey)) {
         continue;
       }

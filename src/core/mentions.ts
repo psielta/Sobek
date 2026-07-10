@@ -1,7 +1,8 @@
 /**
- * `@file` mentions: prompts reference workspace files as `@relative/path`.
- * Every mention must resolve to an existing file inside the workspace root,
- * mirroring Thoth's backend validation of prompt file references.
+ * `@file` mentions: prompts reference workspace files as `@relative/path` and
+ * directories as `@relative/path/`. Every mention must resolve to an existing
+ * file or directory inside the workspace root, mirroring Thoth's backend
+ * validation of prompt file references.
  */
 
 import * as fs from "node:fs/promises";
@@ -59,7 +60,11 @@ function isBalanced(candidate: string): boolean {
   return open === 0;
 }
 
-export type MentionIssueReason = "outside-workspace" | "not-found" | "not-a-file";
+export type MentionIssueReason =
+  | "outside-workspace"
+  | "not-found"
+  | "not-a-file"
+  | "not-a-directory";
 
 export interface MentionIssue {
   mention: Mention;
@@ -90,7 +95,12 @@ export async function validateMentions(
     }
     try {
       const stats = await fs.stat(resolved);
-      if (!stats.isFile()) {
+      if (stats.isFile()) {
+        // A trailing separator says "directory"; pointing it at a file is a typo.
+        if (/[/\\]$/.test(mention.raw)) {
+          issues.push({ mention, reason: "not-a-directory" });
+        }
+      } else if (!stats.isDirectory()) {
         issues.push({ mention, reason: "not-a-file" });
       }
     } catch {

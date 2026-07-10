@@ -106,6 +106,27 @@ export function buildMentionedFilesBlock(files: NamedContent[]): string | undefi
   ].join("\n\n");
 }
 
+export const MAX_DIRECTORY_ENTRIES = 200;
+
+export interface DirectoryEntry {
+  name: string;
+  isDirectory: boolean;
+}
+
+/** Shallow listing attached for `@dir/` mentions: subdirs first, capped. */
+export function buildDirectoryListing(entries: DirectoryEntry[]): string {
+  const sorted = [...entries].sort(
+    (a, b) => Number(b.isDirectory) - Number(a.isDirectory) || a.name.localeCompare(b.name)
+  );
+  const shown = sorted.slice(0, MAX_DIRECTORY_ENTRIES);
+  const lines = shown.map((entry) => (entry.isDirectory ? `${entry.name}/` : entry.name));
+  const omitted = sorted.length - shown.length;
+  if (omitted > 0) {
+    lines.push(`… (+${omitted} entradas omitidas)`);
+  }
+  return ["(listagem de diretório — 1º nível)", ...lines].join("\n");
+}
+
 export function buildLinkedPlanBlock(displayName: string, content: string): string | undefined {
   if (!content.trim()) {
     return undefined;

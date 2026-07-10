@@ -59,6 +59,12 @@ describe("create", () => {
       { relativePath: "nao/existe.md", exists: false },
     ]);
   });
+
+  it("accepts directory mentions and dedupes the trailing-slash variant", async () => {
+    await fs.mkdir(path.join(root, "media"), { recursive: true });
+    const prompt = await store.create({ title: "T", content: "veja @media/ e @media" });
+    expect(prompt.fileReferences).toEqual([{ relativePath: "media/", exists: true }]);
+  });
 });
 
 describe("update and versioning", () => {

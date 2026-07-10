@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { parseMentions, resolveMentionPath } from "./mentions";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { parseMentions, resolveMentionPath, validateMentions } from "./mentions";
 
 describe("parseMentions", () => {
   it("finds mentions at start, after whitespace and inside brackets", () => {
@@ -37,6 +40,14 @@ describe("parseMentions", () => {
     const [mention] = parseMentions(text);
     expect(text.slice(mention.start, mention.end)).toBe("@a.md");
   });
+
+  it("keeps trailing separators so directories can be mentioned", () => {
+    const text = "veja @media/ e @src\\webview\\";
+    expect(parseMentions(text).map((mention) => mention.raw)).toEqual([
+      "media/",
+      "src\\webview\\",
+    ]);
+  });
 });
 
 describe("resolveMentionPath", () => {
@@ -47,5 +58,35 @@ describe("resolveMentionPath", () => {
   it("rejects traversal outside the workspace", () => {
     expect(resolveMentionPath("D:\\repo", "../secrets.txt")).toBeUndefined();
     expect(resolveMentionPath("D:\\repo", "..\\..\\x")).toBeUndefined();
+  });
+});
+
+describe("validateMentions", () => {
+  let root: string;
+
+  beforeAll(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "sobek-mentions-"));
+    await fs.mkdir(path.join(root, "media"));
+    await fs.writeFile(path.join(root, "media", "icon.png"), "x");
+    await fs.writeFile(path.join(root, "a.ts"), "x");
+  });
+
+  afterAll(async () => {
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  it("accepts existing files and directories, with or without trailing slash", async () => {
+    const { issues } = await validateMentions(root, "veja @a.ts, @media e @media/");
+    expect(issues).toEqual([]);
+  });
+
+  it("flags a trailing slash that points to a file", async () => {
+    const { issues } = await validateMentions(root, "veja @a.ts/");
+    expect(issues.map((issue) => issue.reason)).toEqual(["not-a-directory"]);
+  });
+
+  it("still flags missing paths and workspace escapes", async () => {
+    const { issues } = await validateMentions(root, "@nao/existe.md e @../fora.txt");
+    expect(issues.map((issue) => issue.reason)).toEqual(["not-found", "outside-workspace"]);
   });
 });

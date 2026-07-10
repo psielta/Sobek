@@ -3,6 +3,7 @@ import {
   buildChatSystemInstruction,
   buildChatUserMessage,
   buildCustomInstructionsBlock,
+  buildDirectoryListing,
   buildGitContextBlock,
   buildLinkedPlanBlock,
   buildMentionedFilesBlock,
@@ -12,6 +13,7 @@ import {
   buildWorkflowStateBlock,
   buildWorkspaceContextBlock,
   CHAT_SYSTEM_INSTRUCTION,
+  MAX_DIRECTORY_ENTRIES,
   REFINE_SYSTEM_INSTRUCTION,
   WORKSPACE_CONTEXT_FILES,
 } from "./instructions";
@@ -30,6 +32,34 @@ describe("workspace context block", () => {
     expect(block).toContain("## Contexto do workspace");
     expect(block).toContain("### README.md\n\n# Projeto");
     expect(block).toContain("### CLAUDE.md\n\nRegras");
+  });
+});
+
+describe("buildDirectoryListing", () => {
+  it("lists subdirectories first with a trailing slash, then files, alphabetically", () => {
+    const listing = buildDirectoryListing([
+      { name: "z.ts", isDirectory: false },
+      { name: "assets", isDirectory: true },
+      { name: "a.ts", isDirectory: false },
+      { name: "webview", isDirectory: true },
+    ]);
+    expect(listing).toBe(
+      "(listagem de diretório — 1º nível)\nassets/\nwebview/\na.ts\nz.ts"
+    );
+  });
+
+  it("caps the listing and reports the omitted count", () => {
+    const entries = Array.from({ length: MAX_DIRECTORY_ENTRIES + 5 }, (_, index) => ({
+      name: `file-${String(index).padStart(4, "0")}.ts`,
+      isDirectory: false,
+    }));
+    const lines = buildDirectoryListing(entries).split("\n");
+    expect(lines).toHaveLength(MAX_DIRECTORY_ENTRIES + 2);
+    expect(lines.at(-1)).toBe("… (+5 entradas omitidas)");
+  });
+
+  it("renders only the header for an empty directory", () => {
+    expect(buildDirectoryListing([])).toBe("(listagem de diretório — 1º nível)");
   });
 });
 
