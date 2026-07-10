@@ -168,6 +168,51 @@ body {
   margin: 8px 0;
 }
 
+/* Fenced code block wrapper hosting the floating copy button. */
+.code-block {
+  position: relative;
+  margin: 8px 0;
+}
+
+.code-block pre {
+  margin: 0;
+}
+
+.code-copy {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background);
+  color: var(--vscode-icon-foreground, var(--vscode-foreground));
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s ease-in-out;
+}
+
+.code-block:hover .code-copy,
+.code-copy:focus-visible,
+.code-copy.code-copy-done {
+  opacity: 1;
+}
+
+.code-copy:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.code-copy .codicon {
+  font-size: 12px;
+}
+
+.code-copy.code-copy-done {
+  color: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #73c991));
+}
+
 .markdown pre code {
   background: none;
   padding: 0;

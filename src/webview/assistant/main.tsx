@@ -59,7 +59,9 @@ type AssistantKey =
   | "promptOpen"
   | "placeholder"
   | "stopGeneration"
-  | "sendTitle";
+  | "sendTitle"
+  | "copyCode"
+  | "copied";
 
 const DICT: Dictionary<AssistantKey> = {
   modelInUse: { en: "Model in use", "pt-br": "Modelo em uso" },
@@ -88,6 +90,8 @@ const DICT: Dictionary<AssistantKey> = {
   },
   stopGeneration: { en: "Stop generation", "pt-br": "Parar geração" },
   sendTitle: { en: "Send (Enter)", "pt-br": "Enviar (Enter)" },
+  copyCode: { en: "Copy code", "pt-br": "Copiar código" },
+  copied: { en: "Copied", "pt-br": "Copiado" },
 };
 
 const t = makeTranslator(DICT, resolveLocale(host.__SOBEK_STATE__?.language));
@@ -115,6 +119,36 @@ function findMentionToken(value: string, cursor: number): { start: number; query
   const query = match[2] ?? "";
   return { start: cursor - query.length, query };
 }
+
+/** Fenced code block with a copy-to-clipboard button (rendered for markdown `pre`). */
+function CodeBlock({ children, ...rest }: React.ComponentPropsWithoutRef<"pre">) {
+  const preRef = useRef<HTMLPreElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    const text = preRef.current?.innerText ?? "";
+    void navigator.clipboard.writeText(text.replace(/\n$/, ""));
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="code-block">
+      <button
+        className={`code-copy${copied ? " code-copy-done" : ""}`}
+        title={copied ? t("copied") : t("copyCode")}
+        onClick={copy}
+      >
+        <i className={`codicon codicon-${copied ? "check" : "copy"}`} />
+      </button>
+      <pre ref={preRef} {...rest}>
+        {children}
+      </pre>
+    </div>
+  );
+}
+
+const markdownComponents = { pre: CodeBlock };
 
 function App() {
   const initial = host.__SOBEK_STATE__;
@@ -331,7 +365,9 @@ function App() {
           <div key={index} className={`msg msg-${turn.role}`}>
             {turn.role === "model" ? (
               <div className="markdown">
-                <Markdown remarkPlugins={[remarkGfm]}>{turn.text}</Markdown>
+                <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {turn.text}
+                </Markdown>
               </div>
             ) : (
               <pre>{turn.text}</pre>
@@ -348,7 +384,9 @@ function App() {
             )}
             {live.answer ? (
               <div className="markdown">
-                <Markdown remarkPlugins={[remarkGfm]}>{live.answer}</Markdown>
+                <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                  {live.answer}
+                </Markdown>
               </div>
             ) : (
               <pre>…</pre>
