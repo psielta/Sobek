@@ -74,7 +74,13 @@ type AssistantKey =
   | "stopGeneration"
   | "sendTitle"
   | "copyCode"
-  | "copied";
+  | "copied"
+  | "helpTitle"
+  | "helpHeading"
+  | "helpIntro"
+  | "helpLimits"
+  | "helpClickHint"
+  | "closeHelp";
 
 const DICT: Dictionary<AssistantKey> = {
   modelInUse: { en: "Model in use", "pt-br": "Modelo em uso" },
@@ -105,9 +111,124 @@ const DICT: Dictionary<AssistantKey> = {
   sendTitle: { en: "Send (Enter)", "pt-br": "Enviar (Enter)" },
   copyCode: { en: "Copy code", "pt-br": "Copiar código" },
   copied: { en: "Copied", "pt-br": "Copiado" },
+  helpTitle: { en: "Help and examples", "pt-br": "Ajuda e exemplos" },
+  helpHeading: { en: "What can I ask for?", "pt-br": "O que posso pedir?" },
+  helpIntro: {
+    en: "The assistant can act on your prompts: it reads, edits, creates and manages workflows via tools. Some examples:",
+    "pt-br":
+      "O assistente age sobre seus prompts: lê, edita, cria e gerencia workflows por ferramentas. Alguns exemplos:",
+  },
+  helpLimits: {
+    en: "It never archives, deletes or opens terminals — those stay with you. Every content write creates a version (reversible). Tools can be disabled via the sobek.ai.enableTools setting.",
+    "pt-br":
+      "Ele nunca arquiva, exclui ou abre terminais — isso fica com você. Toda escrita de conteúdo cria versão (reversível). As ferramentas podem ser desligadas na configuração sobek.ai.enableTools.",
+  },
+  helpClickHint: {
+    en: "Click an example to place it in the message box.",
+    "pt-br": "Clique num exemplo para colocá-lo na caixa de mensagem.",
+  },
+  closeHelp: { en: "Close help", "pt-br": "Fechar ajuda" },
 };
 
-const t = makeTranslator(DICT, resolveLocale(host.__SOBEK_STATE__?.language));
+interface HelpSection {
+  heading: { en: string; "pt-br": string };
+  examples: Array<{ en: string; "pt-br": string }>;
+}
+
+const HELP_SECTIONS: HelpSection[] = [
+  {
+    heading: { en: "Refine and edit", "pt-br": "Refinar e editar" },
+    examples: [
+      { en: "Refine this prompt and apply it", "pt-br": "Refine este prompt e aplique" },
+      {
+        en: "Make this prompt shorter, as a checklist, and apply it",
+        "pt-br": "Deixe este prompt mais curto, em formato de checklist, e aplique",
+      },
+      {
+        en: "Add an acceptance criteria section to this prompt",
+        "pt-br": "Adicione uma seção de critérios de aceite neste prompt",
+      },
+      {
+        en: "Rename this prompt to 'CSV export v2'",
+        "pt-br": "Renomeie este prompt para 'Exportação CSV v2'",
+      },
+    ],
+  },
+  {
+    heading: { en: "Explore the workspace", "pt-br": "Consultar o workspace" },
+    examples: [
+      {
+        en: "List my prompts, including children",
+        "pt-br": "Liste meus prompts, incluindo os filhos",
+      },
+      {
+        en: "Which workflow phase is this prompt in?",
+        "pt-br": "Em que fase está o workflow deste prompt?",
+      },
+      {
+        en: "Which child prompt templates exist and what does each one require?",
+        "pt-br": "Quais templates de prompt filho existem e o que cada um exige?",
+      },
+    ],
+  },
+  {
+    heading: { en: "Create prompts", "pt-br": "Criar prompts" },
+    examples: [
+      {
+        en: "Create a prompt to implement JWT authentication, Codex agent",
+        "pt-br": "Crie um prompt para implementar autenticação JWT, agente Codex",
+      },
+      {
+        en: "Create a plan-review child prompt for this prompt",
+        "pt-br": "Crie um prompt filho de revisão de plano para este prompt",
+      },
+      {
+        en: "Create the review child for PR #42",
+        "pt-br": "Crie o filho de revisão do PR #42",
+      },
+    ],
+  },
+  {
+    heading: { en: "Manage the workflow", "pt-br": "Gerenciar o workflow" },
+    examples: [
+      {
+        en: "Add a workflow note: 'plan approved by the team'",
+        "pt-br": "Adicione uma nota no workflow: 'plano aprovado pelo time'",
+      },
+      { en: "Advance this prompt's workflow", "pt-br": "Avance o workflow deste prompt" },
+      { en: "Mark this prompt as Ready", "pt-br": "Marque este prompt como Ready" },
+    ],
+  },
+  {
+    heading: { en: "Combine actions", "pt-br": "Combinar ações" },
+    examples: [
+      {
+        en: "Refine this prompt, mark it Ready and log a workflow note about the review",
+        "pt-br": "Refine este prompt, marque como Ready e registre uma nota da revisão no workflow",
+      },
+      {
+        en: "Review my Draft prompts and tell me which are ready to become Ready",
+        "pt-br": "Revise meus prompts em Draft e diga quais estão prontos para virar Ready",
+      },
+    ],
+  },
+  {
+    heading: { en: "Attach context", "pt-br": "Anexar contexto" },
+    examples: [
+      {
+        en: "Use @file.ts or @folder/ in the message to attach workspace context",
+        "pt-br": "Use @arquivo.ts ou @pasta/ na mensagem para anexar contexto do workspace",
+      },
+      {
+        en: "Tick 'Use as context' to include the prompt open in the editor",
+        "pt-br": "Marque 'Usar como contexto' para incluir o prompt aberto no editor",
+      },
+    ],
+  },
+];
+
+const locale = resolveLocale(host.__SOBEK_STATE__?.language);
+const t = makeTranslator(DICT, locale);
 
 /** Chip labels per tool; unknown names fall back to the raw tool name. */
 const TOOL_LABELS: Dictionary<string> = {
@@ -124,7 +245,38 @@ const TOOL_LABELS: Dictionary<string> = {
   advance_workflow: { en: "Advancing workflow", "pt-br": "Avançando workflow" },
   set_prompt_status: { en: "Changing status", "pt-br": "Mudando status" },
 };
-const toolLabel = makeTranslator(TOOL_LABELS, resolveLocale(host.__SOBEK_STATE__?.language));
+const toolLabel = makeTranslator(TOOL_LABELS, locale);
+
+/** Localized examples of what the assistant can do; clicking one fills the composer. */
+function HelpPanel({ onPick, onClose }: { onPick: (example: string) => void; onClose: () => void }) {
+  return (
+    <div className="help-panel">
+      <div className="help-header">
+        <h2>{t("helpHeading")}</h2>
+        <button onClick={onClose} title={t("closeHelp")}>
+          <i className="codicon codicon-close" />
+        </button>
+      </div>
+      <p className="help-intro">{t("helpIntro")}</p>
+      <p className="help-hint">{t("helpClickHint")}</p>
+      {HELP_SECTIONS.map((section) => (
+        <section key={section.heading.en}>
+          <h3>{section.heading[locale]}</h3>
+          <ul>
+            {section.examples.map((example) => (
+              <li key={example.en}>
+                <button className="help-example" onClick={() => onPick(example[locale])}>
+                  {example[locale]}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      <p className="help-limits">{t("helpLimits")}</p>
+    </div>
+  );
+}
 
 function ToolChips({ tools }: { tools: LiveToolCall[] }) {
   if (tools.length === 0) {
@@ -221,6 +373,7 @@ function App() {
   const [live, setLive] = useState<LiveMessage | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [mention, setMention] = useState<MentionState | undefined>();
   const endRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -446,6 +599,13 @@ function App() {
         <span className="chat-model" title={t("modelInUse")}>
           <i className="codicon codicon-sparkle" /> {settings?.model ?? "gemini"}
         </span>
+        <button
+          onClick={() => setShowHelp((current) => !current)}
+          title={t("helpTitle")}
+          className={showHelp ? "active" : undefined}
+        >
+          <i className="codicon codicon-question" />
+        </button>
         <button onClick={() => vscode.postMessage({ type: "configure" })} title={t("aiSettings")}>
           <i className="codicon codicon-settings-gear" />
         </button>
@@ -457,7 +617,21 @@ function App() {
         </button>
       </header>
 
-      <div className="chat-messages">
+      {showHelp && (
+        <HelpPanel
+          onClose={() => setShowHelp(false)}
+          onPick={(example) => {
+            setInput(example);
+            setShowHelp(false);
+            requestAnimationFrame(() => {
+              textareaRef.current?.focus();
+              autoGrow();
+            });
+          }}
+        />
+      )}
+
+      <div className="chat-messages" style={showHelp ? { display: "none" } : undefined}>
         {history.length === 0 && !live && <p className="chat-empty">{t("emptyChat")}</p>}
         {history.map((turn, index) => (
           <div key={index} className={`msg msg-${turn.role}`}>
