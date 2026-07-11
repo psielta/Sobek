@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { buildChatUserMessage } from "../ai/instructions";
 import type { AiService, ChatTurn } from "../ai/service";
+import { AssistantToolExecutor } from "../ai/tools";
 import type { WorkspaceFileIndex } from "../language/file-index";
 import type { PromptStore } from "../store/prompt-store";
 import { buildWebviewHtml } from "../lib/webview-html";
@@ -17,6 +18,7 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
   private history: ChatTurn[] = [];
   private streaming: AbortController | undefined;
   private activePromptId: string | undefined;
+  private readonly toolExecutor: AssistantToolExecutor;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -35,6 +37,10 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
     );
     store.onDidChange(() => this.postActivePrompt());
     this.updateActivePrompt(vscode.window.activeTextEditor);
+    this.toolExecutor = new AssistantToolExecutor({
+      store,
+      getActivePromptId: () => this.activePromptId,
+    });
   }
 
   private updateActivePrompt(editor: vscode.TextEditor | undefined): void {
@@ -160,16 +166,35 @@ export class AssistantViewProvider implements vscode.WebviewViewProvider {
     this.post({ type: "userMessage", text: trimmed });
     this.streaming = new AbortController();
     let answer = "";
+    const tools = new Map<number, { name: string; ok: boolean }>();
     try {
-      for await (const chunk of this.ai.chat(history, trimmed, prompt, this.streaming.signal)) {
-        if (!chunk.isThought) {
-          answer += chunk.text;
+      const events = this.ai.chat(
+        history,
+        trimmed,
+        prompt,
+        this.streaming.signal,
+        this.toolExecutor
+      );
+      for await (const event of events) {
+        if (event.type === "text") {
+          if (!event.isThought) {
+            answer += event.text;
+          }
+          this.post({ type: "chunk", text: event.text, isThought: event.isThought });
+        } else {
+          tools.set(event.callId, { name: event.name, ok: event.status === "ok" });
+          this.post({
+            type: "toolCall",
+            callId: event.callId,
+            name: event.name,
+            status: event.status,
+            detail: event.detail,
+          });
         }
-        this.post({ type: "chunk", text: chunk.text, isThought: chunk.isThought });
       }
       this.history.push(
         { role: "user", text: buildChatUserMessage(trimmed, prompt?.content) },
-        { role: "model", text: answer }
+        { role: "model", text: answer, tools: tools.size > 0 ? [...tools.values()] : undefined }
       );
       this.post({ type: "done" });
     } catch (error) {

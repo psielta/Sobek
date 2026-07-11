@@ -3,14 +3,18 @@ import { parseMentions } from "../core/mentions";
 import type { Prompt } from "../core/prompt";
 import type { PromptStore } from "../store/prompt-store";
 import { buildPromptContext, readSelectedFiles } from "./context-builder";
-import { GeminiClient, type GeminiMessage, type GeminiStreamChunk } from "./gemini-client";
+import { GeminiClient, type GeminiContent } from "./gemini-client";
 import {
   buildChatSystemInstruction,
   buildChatUserMessage,
   buildCustomInstructionsBlock,
   buildMentionedFilesBlock,
   buildRefineSystemInstruction,
+  buildToolGuidanceBlock,
 } from "./instructions";
+import { ASSISTANT_TOOLS } from "./tool-declarations";
+import { runToolLoop } from "./tool-loop";
+import type { AssistantToolExecutor } from "./tools";
 import {
   DEFAULT_AI_SETTINGS,
   findModel,
@@ -25,7 +29,20 @@ const API_KEY_SECRET = "sobek.geminiApiKey";
 export interface ChatTurn {
   role: "user" | "model";
   text: string;
+  /** Tool calls executed while producing a model turn (chip metadata). */
+  tools?: Array<{ name: string; ok: boolean }>;
 }
+
+/** Chat output: streamed text/thought deltas plus tool activity updates. */
+export type ChatEvent =
+  | { type: "text"; text: string; isThought: boolean }
+  | {
+      type: "tool";
+      callId: number;
+      name: string;
+      status: "running" | "ok" | "error";
+      detail?: string;
+    };
 
 export interface RefineOptions {
   content: string;
@@ -68,6 +85,7 @@ export class AiService {
       thinkingEnabled: config.get<boolean>("thinkingEnabled", true),
       thinkingBudget: info?.thinkingMode === "budget" ? budget : null,
       thinkingLevel: config.get<ThinkingLevel>("thinkingLevel", "high"),
+      toolsEnabled: config.get<boolean>("enableTools", true),
     };
   }
 
@@ -151,16 +169,22 @@ export class AiService {
     return result.text.trim();
   }
 
-  /** Support chat: streams deltas, thoughts included like Thoth's drawer. */
+  /**
+   * Support chat: streams deltas, thoughts included like Thoth's drawer.
+   * With an executor, the model may call prompt tools (function calling);
+   * the loop feeds tool results back until the model answers in prose.
+   */
   async *chat(
     history: ChatTurn[],
     message: string,
     prompt: Prompt | undefined,
-    signal?: AbortSignal
-  ): AsyncGenerator<GeminiStreamChunk> {
+    signal?: AbortSignal,
+    executor?: AssistantToolExecutor
+  ): AsyncGenerator<ChatEvent> {
     const client = await this.createClient();
     const settings = this.getSettings();
     const context = await this.workspaceContext();
+    const toolsOn = executor !== undefined && settings.toolsEnabled;
 
     // The prompt context travels in the user turn (like Thoth); Sobek also
     // appends the derived blocks (plan, parent, workflow, git) to it.
@@ -181,19 +205,53 @@ export class AiService {
       }
     }
 
-    const messages: GeminiMessage[] = [
-      ...history.map((turn) => ({ role: turn.role, text: turn.text })),
-      { role: "user" as const, text: userText },
+    // History replays as plain text; tool intermediates from past turns are
+    // not resent — the model re-reads live state through the read tools.
+    const contents: GeminiContent[] = [
+      ...history.map(
+        (turn): GeminiContent => ({ role: turn.role, parts: [{ text: turn.text }] })
+      ),
+      { role: "user", parts: [{ text: userText }] },
     ];
-    yield* client.stream({
-      model: settings.model,
-      systemInstruction: buildChatSystemInstruction(context),
-      messages,
-      temperature: settings.temperature,
-      thinking: this.thinkingFor(settings),
-      includeThoughts: true,
+    const systemInstruction = buildChatSystemInstruction(
+      [context, toolsOn ? buildToolGuidanceBlock() : undefined].filter(Boolean).join("\n\n") ||
+        undefined
+    );
+
+    const events = runToolLoop({
+      contents,
       signal,
+      request: (loopContents, withTools) =>
+        client.stream({
+          model: settings.model,
+          systemInstruction,
+          messages: loopContents,
+          tools: withTools && toolsOn ? ASSISTANT_TOOLS : undefined,
+          temperature: settings.temperature,
+          thinking: this.thinkingFor(settings),
+          includeThoughts: true,
+          signal,
+        }),
+      execute: (call) =>
+        executor
+          ? executor.execute(call)
+          : Promise.resolve({ error: "Ferramentas desativadas." }),
     });
+    for await (const event of events) {
+      if (event.type === "text") {
+        yield { type: "text", text: event.text, isThought: event.isThought };
+      } else if (event.type === "toolStart") {
+        yield { type: "tool", callId: event.callId, name: event.name, status: "running" };
+      } else {
+        yield {
+          type: "tool",
+          callId: event.callId,
+          name: event.name,
+          status: event.ok ? "ok" : "error",
+          detail: event.detail,
+        };
+      }
+    }
   }
 
   listModels() {

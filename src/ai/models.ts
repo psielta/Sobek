@@ -64,6 +64,8 @@ export interface AiSettings {
   thinkingEnabled: boolean;
   thinkingBudget: number | null;
   thinkingLevel: ThinkingLevel | null;
+  /** Whether the chat assistant may call prompt tools (function calling). */
+  toolsEnabled: boolean;
 }
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
@@ -72,6 +74,7 @@ export const DEFAULT_AI_SETTINGS: AiSettings = {
   thinkingEnabled: true,
   thinkingBudget: null,
   thinkingLevel: "high",
+  toolsEnabled: true,
 };
 
 export function findModel(id: string): GeminiModelInfo | undefined {

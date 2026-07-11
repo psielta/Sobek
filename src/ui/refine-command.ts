@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as path from "node:path";
 import type { AiService } from "../ai/service";
 import type { PromptStore } from "../store/prompt-store";
+import { refreshPromptDocument } from "./prompt-document";
 import type { PromptTreeItem } from "./tree";
 
 type PromptRef = string | PromptTreeItem | undefined;
@@ -148,20 +149,7 @@ export function registerRefineCommand(
         return;
       }
       await store.update(prompt.id, { content: refined });
-      // Refresh the on-disk document if it is open in an editor.
-      const document = vscode.workspace.textDocuments.find(
-        (candidate) => candidate.uri.fsPath === store.promptMarkdownPath(prompt.id)
-      );
-      if (document && document.getText() !== refined) {
-        const edit = new vscode.WorkspaceEdit();
-        edit.replace(
-          document.uri,
-          new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)),
-          refined
-        );
-        await vscode.workspace.applyEdit(edit);
-        await document.save();
-      }
+      await refreshPromptDocument(store, prompt.id, refined);
       void vscode.window.showInformationMessage(
         vscode.l10n.t("Refined prompt applied (new version created).")
       );
