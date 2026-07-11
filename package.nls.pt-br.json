@@ -52,6 +52,7 @@
   "config.aiThinkingLevel": "Nível de raciocínio para modelos Gemini 3.x.",
   "config.aiThinkingBudget": "Budget de tokens de raciocínio para modelos Gemini 2.5 (vazio usa um padrão).",
   "config.aiUseWorkspaceContext": "Injeta README.md, CLAUDE.md, AGENT.md, AGENTS.md, GEMINI.md e .github/copilot-instructions.md da raiz do workspace nas instruções de sistema do Gemini.",
+  "config.aiEnableTools": "Permite que o assistente do chat chame ferramentas que leem e editam prompts do Sobek diretamente (function calling).",
   "config.aiIncludeMentionedFiles": "Inclui automaticamente o conteúdo dos arquivos @mencionados no prompt como contexto da IA.",
   "config.aiIncludeLinkedPlan": "Inclui o conteúdo do plano vinculado do prompt como contexto da IA.",
   "config.aiIncludeParentPrompt": "Ao trabalhar em um prompt filho, inclui o conteúdo do prompt pai como contexto da IA.",

@@ -6,9 +6,22 @@ import { makeTranslator, resolveLocale, type Dictionary } from "../i18n";
 import "@vscode/codicons/dist/codicon.css";
 import "./assistant.css";
 
+interface ToolChip {
+  name: string;
+  ok: boolean;
+}
+
+interface LiveToolCall {
+  callId: number;
+  name: string;
+  status: "running" | "ok" | "error";
+  detail?: string;
+}
+
 interface ChatTurn {
   role: "user" | "model";
   text: string;
+  tools?: ToolChip[];
 }
 
 interface ModelInfo {
@@ -96,9 +109,55 @@ const DICT: Dictionary<AssistantKey> = {
 
 const t = makeTranslator(DICT, resolveLocale(host.__SOBEK_STATE__?.language));
 
+/** Chip labels per tool; unknown names fall back to the raw tool name. */
+const TOOL_LABELS: Dictionary<string> = {
+  get_active_prompt: { en: "Reading prompt", "pt-br": "Lendo prompt" },
+  get_prompt: { en: "Reading prompt", "pt-br": "Lendo prompt" },
+  list_prompts: { en: "Listing prompts", "pt-br": "Listando prompts" },
+  get_workflow_state: { en: "Reading workflow", "pt-br": "Lendo workflow" },
+  list_templates: { en: "Listing templates", "pt-br": "Listando templates" },
+  update_prompt_content: { en: "Updating prompt", "pt-br": "Atualizando prompt" },
+  update_prompt_title: { en: "Renaming prompt", "pt-br": "Renomeando prompt" },
+  create_prompt: { en: "Creating prompt", "pt-br": "Criando prompt" },
+  create_child_prompt: { en: "Creating child prompt", "pt-br": "Criando prompt filho" },
+  add_workflow_note: { en: "Adding note", "pt-br": "Adicionando nota" },
+  advance_workflow: { en: "Advancing workflow", "pt-br": "Avançando workflow" },
+  set_prompt_status: { en: "Changing status", "pt-br": "Mudando status" },
+};
+const toolLabel = makeTranslator(TOOL_LABELS, resolveLocale(host.__SOBEK_STATE__?.language));
+
+function ToolChips({ tools }: { tools: LiveToolCall[] }) {
+  if (tools.length === 0) {
+    return null;
+  }
+  return (
+    <div className="tool-chips">
+      {tools.map((tool) => (
+        <span
+          key={tool.callId}
+          className={`tool-chip${tool.status === "error" ? " tool-chip-error" : ""}`}
+          title={tool.detail}
+        >
+          <i
+            className={`codicon ${
+              tool.status === "running"
+                ? "codicon-loading codicon-modifier-spin"
+                : tool.status === "ok"
+                  ? "codicon-check"
+                  : "codicon-error"
+            }`}
+          />
+          {toolLabel(tool.name)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 interface LiveMessage {
   answer: string;
   thoughts: string;
+  tools: LiveToolCall[];
 }
 
 interface MentionState {
@@ -181,6 +240,10 @@ function App() {
         requestId?: number;
         prompt?: ActivePrompt | null;
         activePrompt?: ActivePrompt | null;
+        callId?: number;
+        name?: string;
+        status?: "running" | "ok" | "error";
+        detail?: string;
       };
       switch (message.type) {
         case "activePrompt":
@@ -202,22 +265,47 @@ function App() {
           break;
         case "userMessage":
           setHistory((current) => [...current, { role: "user", text: message.text ?? "" }]);
-          setLive({ answer: "", thoughts: "" });
+          setLive({ answer: "", thoughts: "", tools: [] });
           setBusy(true);
           setError(undefined);
           break;
         case "chunk":
           setLive((current) => {
-            const base = current ?? { answer: "", thoughts: "" };
+            const base = current ?? { answer: "", thoughts: "", tools: [] };
             return message.isThought
               ? { ...base, thoughts: base.thoughts + (message.text ?? "") }
               : { ...base, answer: base.answer + (message.text ?? "") };
           });
           break;
+        case "toolCall":
+          setLive((current) => {
+            const base = current ?? { answer: "", thoughts: "", tools: [] };
+            const update: LiveToolCall = {
+              callId: message.callId ?? 0,
+              name: message.name ?? "",
+              status: message.status ?? "running",
+              detail: message.detail,
+            };
+            const tools = base.tools.some((tool) => tool.callId === update.callId)
+              ? base.tools.map((tool) => (tool.callId === update.callId ? update : tool))
+              : [...base.tools, update];
+            return { ...base, tools };
+          });
+          break;
         case "done":
           setLive((current) => {
-            if (current && current.answer) {
-              setHistory((turns) => [...turns, { role: "model", text: current.answer }]);
+            if (current && (current.answer || current.tools.length > 0)) {
+              setHistory((turns) => [
+                ...turns,
+                {
+                  role: "model",
+                  text: current.answer,
+                  tools:
+                    current.tools.length > 0
+                      ? current.tools.map((tool) => ({ name: tool.name, ok: tool.status === "ok" }))
+                      : undefined,
+                },
+              ]);
             }
             return undefined;
           });
@@ -374,11 +462,22 @@ function App() {
         {history.map((turn, index) => (
           <div key={index} className={`msg msg-${turn.role}`}>
             {turn.role === "model" ? (
-              <div className="markdown">
-                <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                  {turn.text}
-                </Markdown>
-              </div>
+              <>
+                {turn.tools && (
+                  <ToolChips
+                    tools={turn.tools.map((tool, callId) => ({
+                      callId,
+                      name: tool.name,
+                      status: tool.ok ? "ok" : "error",
+                    }))}
+                  />
+                )}
+                <div className="markdown">
+                  <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    {turn.text}
+                  </Markdown>
+                </div>
+              </>
             ) : (
               <pre>{turn.text}</pre>
             )}
@@ -386,6 +485,7 @@ function App() {
         ))}
         {live && (
           <div className="msg msg-model">
+            <ToolChips tools={live.tools} />
             {live.thoughts && !live.answer && (
               <details open>
                 <summary>{t("reasoning")}</summary>
@@ -399,7 +499,7 @@ function App() {
                 </Markdown>
               </div>
             ) : (
-              <pre>…</pre>
+              !live.tools.length && <pre>…</pre>
             )}
           </div>
         )}

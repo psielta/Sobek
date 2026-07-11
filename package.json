@@ -631,6 +631,11 @@
           "default": false,
           "description": "%config.aiUseWorkspaceContext%"
         },
+        "sobek.ai.enableTools": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.aiEnableTools%"
+        },
         "sobek.ai.includeMentionedFiles": {
           "type": "boolean",
           "default": true,
