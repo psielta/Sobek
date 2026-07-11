@@ -55,10 +55,34 @@ export function buildAgentCommand(
 
 export type ShellFlavor = "powershell" | "posix";
 
-/** Quotes a single CLI argument for the target shell. */
+/**
+ * Escapes a value for the Windows native-command argv layer: `"` must arrive
+ * as `\"` and a backslash run before a quote doubles. PowerShell (5.1/Legacy
+ * passing) pastes the string onto the native command line verbatim, so an
+ * unescaped `"` in the prompt closes the argument early and the rest is parsed
+ * as extra CLI arguments (codex: `error: unrecognized subcommand`).
+ */
+function escapeForWindowsNativeArg(text: string): string {
+  const escaped = text.replace(/(\\*)"/g, '$1$1\\"');
+  // PowerShell wraps whitespace-containing args in quotes; a trailing
+  // backslash run would escape that closing quote.
+  return /\s/.test(escaped) ? escaped.replace(/(\\+)$/, "$1$1") : escaped;
+}
+
+/**
+ * pwsh 7.3+ defaults $PSNativeCommandArgumentPassing to 'Windows', which
+ * re-escapes embedded quotes on top of escapeForWindowsNativeArg. Pinning
+ * 'Legacy' inside a scriptblock makes every PowerShell behave like 5.1 for
+ * this one launch (on 5.1 the assignment is an inert variable).
+ */
+function withLegacyArgumentPassing(command: string): string {
+  return `& { $PSNativeCommandArgumentPassing = 'Legacy'; ${command} }`;
+}
+
+/** Quotes a single CLI argument, bound for a native command, per shell. */
 export function quoteForShell(text: string, shell: ShellFlavor): string {
   if (shell === "powershell") {
-    return `'${text.replace(/'/g, "''")}'`;
+    return `'${escapeForWindowsNativeArg(text).replace(/'/g, "''")}'`;
   }
   return `'${text.replace(/'/g, "'\\''")}'`;
 }
@@ -70,7 +94,9 @@ export function quoteForShell(text: string, shell: ShellFlavor): string {
  * typing into a booting TUI raced its readiness and truncated prompts, while
  * an argument can never be cut off. Plan mode uses
  * `claude --permission-mode plan` (without --dangerously-skip-permissions —
- * plan mode reviews before executing).
+ * plan mode reviews before executing). On PowerShell the whole command runs
+ * inside a Legacy argument-passing scriptblock so the prompt's argv escaping
+ * holds on every PowerShell version.
  */
 export function buildAgentRunCommand(
   agent: AgentKind,
@@ -80,18 +106,23 @@ export function buildAgentRunCommand(
   worktree?: WorktreeOption
 ): string {
   const quoted = quoteForShell(flattenPromptForCli(prompt), shell);
+  let command: string;
   switch (agent) {
     case "Codex":
-      return `codex --yolo ${quoted}`;
+      command = `codex --yolo ${quoted}`;
+      break;
     case "Grok":
-      return `${buildAgentCommand("Grok", effort)} ${quoted}`;
+      command = `${buildAgentCommand("Grok", effort)} ${quoted}`;
+      break;
     case "ClaudePlan": {
       const effortFlag = effort ? ` --effort ${effort}` : "";
-      return `claude${worktreeFlag(worktree)}${effortFlag} --permission-mode plan ${quoted}`;
+      command = `claude${worktreeFlag(worktree)}${effortFlag} --permission-mode plan ${quoted}`;
+      break;
     }
     default:
-      return `${buildAgentCommand("Claude", effort, worktree)} ${quoted}`;
+      command = `${buildAgentCommand("Claude", effort, worktree)} ${quoted}`;
   }
+  return shell === "powershell" ? withLegacyArgumentPassing(command) : command;
 }
 
 export interface AgentTabDefaults {

@@ -64,6 +64,11 @@ function detectShellFlavor(): ShellFlavor {
   if (shell.includes("pwsh") || shell.includes("powershell")) {
     return "powershell";
   }
+  // Git Bash/WSL on Windows must get POSIX quoting, not the PowerShell
+  // Legacy-passing wrapper.
+  if (shell.includes("bash") || shell.includes("zsh") || shell.includes("fish")) {
+    return "posix";
+  }
   return process.platform === "win32" ? "powershell" : "posix";
 }
 

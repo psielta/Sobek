@@ -61,27 +61,61 @@ describe("quoteForShell", () => {
   it("escapes single quotes per shell flavor", () => {
     expect(quoteForShell("it's fine", "powershell")).toBe("'it''s fine'");
     expect(quoteForShell("it's fine", "posix")).toBe("'it'\\''s fine'");
-    expect(quoteForShell('com "aspas" e $var', "powershell")).toBe("'com \"aspas\" e $var'");
+  });
+
+  it("escapes double quotes for the Windows native argv layer", () => {
+    // Unescaped, PowerShell pastes the " onto the native command line and the
+    // argument splits (codex saw the prompt's tail as extra subcommands).
+    expect(quoteForShell('com "aspas" e $var', "powershell")).toBe(
+      "'com \\\"aspas\\\" e $var'"
+    );
+    expect(quoteForShell('backslash antes \\"quote\\"', "powershell")).toBe(
+      "'backslash antes \\\\\\\"quote\\\\\\\"'"
+    );
+    // A trailing backslash would escape the closing quote PowerShell adds.
+    expect(quoteForShell("caminho C:\\foo\\", "powershell")).toBe("'caminho C:\\foo\\\\'");
+    // POSIX single quotes already pass " literally.
+    expect(quoteForShell('com "aspas"', "posix")).toBe("'com \"aspas\"'");
   });
 });
+
+/** PowerShell run commands are wrapped to pin native argument passing. */
+function psWrapped(command: string): string {
+  return `& { $PSNativeCommandArgumentPassing = 'Legacy'; ${command} }`;
+}
 
 describe("buildAgentRunCommand", () => {
   it("passes the flattened prompt as a quoted CLI argument", () => {
     expect(buildAgentRunCommand("Claude", "linha 1\nlinha 2", "powershell", "max")).toBe(
-      "claude --dangerously-skip-permissions --effort max 'linha 1 linha 2'"
+      psWrapped("claude --dangerously-skip-permissions --effort max 'linha 1 linha 2'")
     );
-    expect(buildAgentRunCommand("Codex", "faça x", "powershell")).toBe("codex --yolo 'faça x'");
+    expect(buildAgentRunCommand("Codex", "faça x", "powershell")).toBe(
+      psWrapped("codex --yolo 'faça x'")
+    );
     expect(buildAgentRunCommand("Grok", "faça x", "posix", "high")).toBe(
       "grok --always-approve --effort high 'faça x'"
     );
   });
 
+  it("survives double quotes inside the prompt on PowerShell", () => {
+    // Regression: prompts with quoted phrases broke codex with
+    // `error: unrecognized subcommand 'de'`.
+    expect(
+      buildAgentRunCommand("Codex", 'alternar entre "Preview de Diagramas" e "Canvas Livre"', "powershell")
+    ).toBe(
+      psWrapped("codex --yolo 'alternar entre \\\"Preview de Diagramas\\\" e \\\"Canvas Livre\\\"'")
+    );
+    expect(
+      buildAgentRunCommand("Claude", 'diga "olá"', "posix")
+    ).toBe("claude --dangerously-skip-permissions 'diga \"olá\"'");
+  });
+
   it("uses --permission-mode plan without skip-permissions for plan mode", () => {
     expect(buildAgentRunCommand("ClaudePlan", "planeje isso", "powershell", "xhigh")).toBe(
-      "claude --effort xhigh --permission-mode plan 'planeje isso'"
+      psWrapped("claude --effort xhigh --permission-mode plan 'planeje isso'")
     );
     expect(buildAgentRunCommand("ClaudePlan", "planeje isso", "powershell")).toBe(
-      "claude --permission-mode plan 'planeje isso'"
+      psWrapped("claude --permission-mode plan 'planeje isso'")
     );
   });
 
@@ -89,19 +123,19 @@ describe("buildAgentRunCommand", () => {
     // A bare --worktree right before the positional prompt would consume it
     // as the worktree name (the flag's value is optional and greedy).
     expect(buildAgentRunCommand("Claude", "faça x", "powershell", "max", true)).toBe(
-      "claude --worktree --dangerously-skip-permissions --effort max 'faça x'"
+      psWrapped("claude --worktree --dangerously-skip-permissions --effort max 'faça x'")
     );
     expect(buildAgentRunCommand("Claude", "faça x", "powershell", undefined, true)).toBe(
-      "claude --worktree --dangerously-skip-permissions 'faça x'"
+      psWrapped("claude --worktree --dangerously-skip-permissions 'faça x'")
     );
     expect(buildAgentRunCommand("ClaudePlan", "planeje", "powershell", undefined, "wt-plan")).toBe(
-      "claude --worktree wt-plan --permission-mode plan 'planeje'"
+      psWrapped("claude --worktree wt-plan --permission-mode plan 'planeje'")
     );
     expect(buildAgentRunCommand("ClaudePlan", "planeje", "powershell", undefined, true)).toBe(
-      "claude --worktree --permission-mode plan 'planeje'"
+      psWrapped("claude --worktree --permission-mode plan 'planeje'")
     );
     expect(buildAgentRunCommand("Codex", "faça x", "powershell", undefined, true)).toBe(
-      "codex --yolo 'faça x'"
+      psWrapped("codex --yolo 'faça x'")
     );
   });
 });
