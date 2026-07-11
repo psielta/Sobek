@@ -54,6 +54,20 @@ export function buildWorkspaceContextBlock(files: WorkspaceContextFile[]): strin
   ].join("\n\n");
 }
 
+/** Tool-usage guidance appended to the chat system instruction when tools are on. */
+export function buildToolGuidanceBlock(): string {
+  return [
+    "## Ferramentas do Sobek",
+    "Você pode agir sobre os prompts do usuário pelas funções disponíveis. Diretrizes:",
+    "- Prefira ler antes de escrever: use get_active_prompt, get_prompt ou list_prompts para conhecer o estado atual.",
+    "- Quando o usuário pedir para refinar, reescrever ou aplicar mudanças no prompt aberto, chame update_prompt_content com o conteúdo Markdown COMPLETO (não parcial). As escritas criam versão nova e são reversíveis; não peça confirmação.",
+    "- Use list_templates antes de create_child_prompt e informe os inputs e pull_request exigidos pelo template.",
+    "- Nunca invente prompt_id: obtenha ids por list_prompts ou omita para usar o prompt aberto.",
+    "- Se uma função retornar error, explique o problema ao usuário e, se fizer sentido, peça o que falta.",
+    "- Depois de agir, resuma em pt-BR o que foi alterado.",
+  ].join("\n");
+}
+
 export function buildRefineSystemInstruction(context?: string): string {
   return context ? `${REFINE_SYSTEM_INSTRUCTION}\n\n${context}` : REFINE_SYSTEM_INSTRUCTION;
 }

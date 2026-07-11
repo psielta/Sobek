@@ -14,6 +14,35 @@ export interface GeminiMessage {
   text: string;
 }
 
+export interface GeminiFunctionCall {
+  name: string;
+  args: Record<string, unknown>;
+}
+
+export interface GeminiFunctionResponse {
+  name: string;
+  response: Record<string, unknown>;
+}
+
+/** One content part; Gemini 3 thought signatures must be echoed back verbatim. */
+export type GeminiPart =
+  | { text: string; thought?: boolean; thoughtSignature?: string }
+  | { functionCall: GeminiFunctionCall; thoughtSignature?: string }
+  | { functionResponse: GeminiFunctionResponse };
+
+/** Full-parts content, used by the tool loop to replay model/function turns. */
+export interface GeminiContent {
+  role: "user" | "model";
+  parts: GeminiPart[];
+}
+
+/** OpenAPI-subset schema; type values use the REST enum ("OBJECT", "STRING", ...). */
+export interface GeminiFunctionDeclaration {
+  name: string;
+  description: string;
+  parameters?: Record<string, unknown>;
+}
+
 export interface GeminiThinkingOptions {
   mode: ThinkingMode;
   budget?: number | null;
@@ -23,7 +52,8 @@ export interface GeminiThinkingOptions {
 export interface GeminiRequestOptions {
   model: string;
   systemInstruction?: string;
-  messages: GeminiMessage[];
+  messages: Array<GeminiMessage | GeminiContent>;
+  tools?: GeminiFunctionDeclaration[];
   temperature?: number;
   thinking?: GeminiThinkingOptions;
   /** Whether thought parts should be requested and surfaced (chat only). */
@@ -32,8 +62,11 @@ export interface GeminiRequestOptions {
 }
 
 export interface GeminiStreamChunk {
+  /** Empty string on functionCall chunks. */
   text: string;
   isThought: boolean;
+  functionCall?: GeminiFunctionCall;
+  thoughtSignature?: string;
 }
 
 export interface GeminiClientOptions {
@@ -45,7 +78,14 @@ const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
 interface GenerateContentResponse {
   candidates?: Array<{
-    content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+    content?: {
+      parts?: Array<{
+        text?: string;
+        thought?: boolean;
+        functionCall?: { name: string; args?: Record<string, unknown> };
+        thoughtSignature?: string;
+      }>;
+    };
   }>;
   usageMetadata?: {
     promptTokenCount?: number;
@@ -80,13 +120,17 @@ export class GeminiClient {
 
   private buildBody(options: GeminiRequestOptions): Record<string, unknown> {
     const body: Record<string, unknown> = {
-      contents: options.messages.map((message) => ({
-        role: message.role,
-        parts: [{ text: message.text }],
-      })),
+      contents: options.messages.map((message) =>
+        "parts" in message
+          ? { role: message.role, parts: message.parts }
+          : { role: message.role, parts: [{ text: message.text }] }
+      ),
     };
     if (options.systemInstruction) {
       body.systemInstruction = { parts: [{ text: options.systemInstruction }] };
+    }
+    if (options.tools && options.tools.length > 0) {
+      body.tools = [{ functionDeclarations: options.tools }];
     }
 
     const generationConfig: Record<string, unknown> = {};
@@ -182,8 +226,20 @@ export class GeminiClient {
           const chunk = JSON.parse(data) as GenerateContentResponse;
           const parts = chunk.candidates?.[0]?.content?.parts ?? [];
           for (const part of parts) {
-            if (typeof part.text === "string" && part.text.length > 0) {
-              yield { text: part.text, isThought: part.thought === true };
+            if (part.functionCall) {
+              // Args arrive as a complete JSON object within a single chunk.
+              yield {
+                text: "",
+                isThought: false,
+                functionCall: { name: part.functionCall.name, args: part.functionCall.args ?? {} },
+                thoughtSignature: part.thoughtSignature,
+              };
+            } else if (typeof part.text === "string" && part.text.length > 0) {
+              yield {
+                text: part.text,
+                isThought: part.thought === true,
+                thoughtSignature: part.thoughtSignature,
+              };
             }
           }
         }

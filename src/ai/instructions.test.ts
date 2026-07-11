@@ -4,6 +4,7 @@ import {
   buildChatUserMessage,
   buildCustomInstructionsBlock,
   buildDirectoryListing,
+  buildToolGuidanceBlock,
   buildGitContextBlock,
   buildLinkedPlanBlock,
   buildMentionedFilesBlock,
@@ -32,6 +33,21 @@ describe("workspace context block", () => {
     expect(block).toContain("## Contexto do workspace");
     expect(block).toContain("### README.md\n\n# Projeto");
     expect(block).toContain("### CLAUDE.md\n\nRegras");
+  });
+});
+
+describe("buildToolGuidanceBlock", () => {
+  it("mentions the write tools and full-content refinement", () => {
+    const block = buildToolGuidanceBlock();
+    expect(block).toContain("## Ferramentas do Sobek");
+    expect(block).toContain("update_prompt_content");
+    expect(block).toContain("create_child_prompt");
+    expect(block).toContain("COMPLETO");
+  });
+
+  it("does not alter the verbatim chat instruction", () => {
+    expect(buildChatSystemInstruction(undefined)).toBe(CHAT_SYSTEM_INSTRUCTION);
+    expect(CHAT_SYSTEM_INSTRUCTION).not.toContain("Ferramentas");
   });
 });
 
